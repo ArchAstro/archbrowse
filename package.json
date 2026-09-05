@@ -1,0 +1,50 @@
+{
+  "name": "react-kitty",
+  "version": "0.1.0",
+  "description": "Live React and web pages rendered by Chromium in Kitty graphics terminals",
+  "type": "module",
+  "bin": {
+    "react-kitty": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "examples",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts",
+    "test:e2e": "tsx test/harness/run.ts",
+    "check": "npm run typecheck && npm test && npm run test:e2e && npm run test:sessions",
+    "prepack": "npm run build",
+    "pretest:e2e": "npm run build && node scripts/prepare-pty.mjs",
+    "test:native": "npm run build && tsx test/harness/native.ts",
+    "test:sessions": "npm run build && node scripts/prepare-pty.mjs && tsx test/harness/persistence.ts",
+    "pretest:herdr": "npm run build && node scripts/prepare-pty.mjs",
+    "test:herdr": "tsx test/harness/herdr-run.ts"
+  },
+  "dependencies": {
+    "esbuild": "^0.25.0",
+    "playwright-core": "^1.58.0",
+    "proper-lockfile": "^4.1.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "toml-eslint-parser": "^0.10.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/pngjs": "^6.0.0",
+    "@types/proper-lockfile": "^4.1.4",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "node-pty": "^1.1.0",
+    "pngjs": "^7.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}
