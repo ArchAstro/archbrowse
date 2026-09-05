@@ -1,3 +1,5 @@
+import { serveAgent } from './agent/ipc.js';
+import { AgentController } from './agent/controller.js';
 import { offerHerdrSetup } from './herdr-setup.js';
 import { HerdrGraphics, HerdrCapabilityError } from './herdr.js';
 import { once } from 'node:events';
@@ -21,6 +23,8 @@ export async function runSession(options: SessionOptions) {
   let browser: Browser | undefined, server: Awaited<ReturnType<typeof openTarget>> | undefined;
   let named: Awaited<ReturnType<typeof acquireSession>> | undefined;
   let saved: SessionRecord | undefined;
+  let agentServer:Awaited<ReturnType<typeof serveAgent>>|undefined;
+  let agent:AgentController|undefined;
   let ready = false;
   let ownContext: BrowserContext | undefined;
   let entered = false, stopped = false, pixel = false, graphics: boolean | undefined;
@@ -33,7 +37,11 @@ export async function runSession(options: SessionOptions) {
   const outputAbort = new AbortController();
   const stop = () => { stopped = true; outputAbort.abort(); };
   process.on('SIGINT', stop); process.on('SIGTERM', stop); process.on('SIGHUP', stop);
-  const enqueue = (fn: () => Promise<unknown>) => { queue = queue.then(async () => { if (!stopped) await fn(); }).catch(error => { failure = error; stopped = true; }); };
+  function serialize<T>(fn:()=>Promise<T>):Promise<T> {
+    const result=queue.then(()=>{if(stopped)throw new Error('Session is closing.');return fn();});
+    queue=result.then(()=>{},()=>{});return result;
+  }
+  const enqueue = (fn: () => Promise<unknown>) => { void serialize(fn).catch(error=>{failure=error;stop();}); };
   const parser = new InputParser((event: Input) => {
     if (event.type === 'graphics') { graphics = event.ok; return; }
     if (event.type === 'mode' && event.mode === 1016 && (event.status === 1 || event.status === 2)) { pixel = true; stdout.write('\x1b[?1016h'); return; }
@@ -102,12 +110,16 @@ export async function runSession(options: SessionOptions) {
     // Query responses share stdin with user events. A bounded probe avoids hanging old terminals.
     for (let n = 0; n < 20 && !herdr && graphics === undefined && !stopped; n++) await delay(25);
     if (!herdr && graphics !== true && !options.force) throw new Error('Terminal did not confirm Kitty graphics support. Use Kitty/Ghostty, or --force for a compatible terminal that omits query responses.');
+    if(named){
+      agent=new AgentController(named.name,view);
+      agentServer=await serveAgent(named.name,request=>request.command==='wait'?agent!.execute(request):serialize(()=>agent!.execute(request)));
+    }
     let lastHash = '', id: 101 | 102 = 101, appliedResize = -1;
     while (!stopped) {
       const started = performance.now();
       await queue;
       if (stopped) break;
-      if (appliedResize !== resizeRevision) { appliedResize = resizeRevision; if(herdr){geometry=await herdr.geometry(geometry);if(pixel!==herdr.pixelMouse){pixel=herdr.pixelMouse;await write(pixel?'\x1b[?1016h':'\x1b[?1016l');}} await view.resize(); lastHash = ''; }
+      if (appliedResize !== resizeRevision) { appliedResize = resizeRevision; if(herdr){geometry=await herdr.geometry(geometry);if(pixel!==herdr.pixelMouse){pixel=herdr.pixelMouse;await write(pixel?'\x1b[?1016h':'\x1b[?1016l');}} await serialize(()=>view!.resize()); lastHash = ''; }
       const png = view.frame;
       if (!png) { await delay(20); continue; }
       const hash = createHash('sha256').update(png).digest('hex');
@@ -118,6 +130,9 @@ export async function runSession(options: SessionOptions) {
     if (failure) throw failure;
   } finally {
     stopped = true;
+    let cleanupError:unknown;
+    try {await agentServer?.close();}catch(error){cleanupError=error;}
+    agent?.close();
     view?.dispose();
     herdr?.close();
     clearTimeout(escapeTimer);
@@ -126,7 +141,6 @@ export async function runSession(options: SessionOptions) {
     if (entered) { stdout.write(leaveTerminal); stdin.setRawMode(false); stdin.pause(); }
     // Save before closing Chromium so session cookies and the active URLs are available.
     // Closing a persistent context flushes localStorage / IndexedDB to its profile.
-    let cleanupError:unknown;
     try {
       if(named && saved && ready && ownContext) {
         const pages=ownContext.pages().filter(page=>!page.isClosed() && /^https?:\/\//i.test(page.url()));

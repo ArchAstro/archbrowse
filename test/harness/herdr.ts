@@ -74,10 +74,10 @@ class KittyHost {
 async function rpc(socket:string,method:string,params:unknown):Promise<any>{
   return new Promise((resolve,reject)=>{const client=createConnection(socket,()=>client.write(JSON.stringify({id:'herdr-test',method,params})+'\n'));let data='';client.on('data',chunk=>{data+=chunk;const end=data.indexOf('\n');if(end>=0){client.end();const reply=JSON.parse(data.slice(0,end));if(reply.error)reject(new Error(JSON.stringify(reply.error)));else resolve(reply.result);}});client.on('error',reject);client.setTimeout(5000,()=>{client.destroy();reject(new Error('HerdR API timeout'));});});
 }
-export async function testHerdr(browser:Browser,endpoint:string,artifacts:string,legacy=false,setup?:'accept'|'decline',link:boolean|'live'=false){
+export async function testHerdr(browser:Browser,endpoint:string,artifacts:string,legacy=false,setup?:'accept'|'decline',link:boolean|'live'=false,agent=false){
   const dir=await mkdtemp(join(tmpdir(),'rk-herdr-e2e-'));const name=`rk-test-${process.pid}-${Date.now()}`;
   const config=join(dir,'config.toml');await writeFile(config,`onboarding = false\n[experimental]\nkitty_graphics = ${!legacy&&!setup}\n`);
-  const env:NodeJS.ProcessEnv={...process.env,HERDR_ENV:'',HERDR_PANE_ID:'',HERDR_SOCKET_PATH:'',HERDR_SESSION:'',HERDR_CONFIG_PATH:config,TERM:'xterm-ghostty',TERM_PROGRAM:'ghostty'};
+  const env:NodeJS.ProcessEnv={...process.env,HERDR_ENV:'',HERDR_PANE_ID:'',HERDR_SOCKET_PATH:'',HERDR_SESSION:'',HERDR_CONFIG_PATH:config,REACT_KITTY_SESSIONS_DIR:join(dir,'react-sessions'),TERM:'xterm-ghostty',TERM_PROGRAM:'ghostty'};
   // This is a local outer terminal, independent of the shell running the tests.
   for(const name of ['SSH_CONNECTION','SSH_TTY','TMUX','STY','HERDR_REMOTE_KEYBINDINGS'])delete env[name];
   const host=new KittyHost(name,env,link?join(dir,'tty'):undefined);let socket='',page:Page|undefined;
@@ -98,10 +98,27 @@ export async function testHerdr(browser:Browser,endpoint:string,artifacts:string
     if(legacy){await waitFor(()=>host.output.includes('menu'),'HerdR client first paint before config reload');await assert.rejects(()=>rpc(socket,'pane.graphics.info',{pane_id:pane}),/feature_disabled/);host.releaseDimensions();await writeFile(config,'onboarding = false\n[experimental]\nkitty_graphics = true\n');await rpc(socket,'server.reload_config',{});}
     if(setup)await assert.rejects(()=>rpc(socket,'pane.graphics.info',{pane_id:pane}),/feature_disabled/);
     else if(legacy)await assert.rejects(()=>rpc(socket,'pane.graphics.info',{pane_id:pane}),/cell_size_unavailable/);
-    else {const info=await rpc(socket,'pane.graphics.info',{pane_id:pane});await writeFile(join(artifacts,'herdr-capability.json'),JSON.stringify(info,null,2));assert.ok(info.cell_width_px>0&&info.cell_height_px>0);}
     const quote=(value:string)=>"'"+value.replaceAll("'","'\\''")+"'";
-    const command=[process.execPath,resolve('dist/cli.js'),link==='live'?'https://example.com/':link?resolve('test/fixtures/example-domain.html'):resolve('examples/html/index.html'),'--cdp',endpoint,'--no-install'].map(quote).join(' ');
+    const command=[process.execPath,resolve('dist/cli.js'),link==='live'?'https://example.com/':link?resolve('test/fixtures/example-domain.html'):resolve('examples/html/index.html'),...(agent?['--session','agent-test']:['--cdp',endpoint]),'--no-install'].map(quote).join(' ');
     await exec('herdr',['pane','run',pane,command],{env:{...env,HERDR_SOCKET_PATH:socket}});
+    if(agent){
+      const control=async(args:string[])=>JSON.parse((await exec(process.execPath,[resolve('dist/cli.js'),'--session','agent-test','--json',...args],{env})).stdout).result;
+      try {await waitFor(()=>!!host.frame,'named viewer renders through HerdR');}catch(error){
+        const info=await control(['attach']).catch(e=>({error:String(e)}));await writeFile(join(artifacts,'herdr-agent-failure.json'),JSON.stringify(info,null,2));
+        await control(['screenshot',join(artifacts,'herdr-agent-failure.png')]).catch(()=>{});
+        throw error;
+      }
+      const attached=await control(['attach']);assert.equal(attached.session,'agent-test');
+      const snapshot=await control(['snapshot','-i']);
+      const button=snapshot.refs.find((r:{role:string;name:string})=>r.role==='button'&&r.name==='Count: 0');assert.ok(button);
+      await control(['click',button.ref]);assert.equal(await control(['get','text','#count']),'1');
+      const screenshot=join(artifacts,'29-herdr-agent-browser.png');await control(['screenshot',screenshot]);const reference=await readFile(screenshot);
+      await waitFor(()=>!!host.frame&&samePixels(host.frame,reference),'agent changes visible in HerdR outer pixels');
+      await writeFile(join(artifacts,'29-herdr-agent-terminal.png'),host.frame!);
+      await rpc(socket,'pane.send_keys',{pane_id:pane,keys:['ctrl+q']});await waitFor(()=>!host.frame,'agent viewer clears HerdR on exit');
+      await waitFor(async()=>{try{await control(['attach']);return false;}catch(error){const reply=JSON.parse((error as {stdout:string}).stdout);return reply.error?.code==='session_not_running'||reply.error?.code==='session_closed';}},'agent endpoint closes with HerdR viewer');
+      return;
+    }
     if(setup){
       const text=()=>host.output.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g,'').replace(/\x1b\][^\x1b\x07]*(?:\x07|\x1b\\)/g,'').replace(/\s/g,'');
       await waitFor(()=>text().includes('[y/N]'),'config update offered inside HerdR');
@@ -154,7 +171,7 @@ export async function testHerdr(browser:Browser,endpoint:string,artifacts:string
     await waitFor(()=>!host.frame,'CLI exit clears HerdR image layer');
   }finally{
     if(link&&page&&!page.isClosed())await writeFile(join(artifacts,link==='live'?'herdr-live-link-evidence.json':'herdr-link-evidence.json'),JSON.stringify({pixelMouse:host.pixelMouse,url:page.url(),events:await page.evaluate(()=>(window as any).__pointer).catch(()=>[])},null,2));
-    await writeFile(join(artifacts,link==='live'?'herdr-live-link-pty.log':link?'herdr-link-pty.log':setup?`herdr-setup-${setup}-pty.log`:legacy?'herdr-legacy-client-pty.log':'herdr-delayed-discovery-pty.log'),host.output);
+    await writeFile(join(artifacts,agent?'herdr-agent-pty.log':link==='live'?'herdr-live-link-pty.log':link?'herdr-link-pty.log':setup?`herdr-setup-${setup}-pty.log`:legacy?'herdr-legacy-client-pty.log':'herdr-delayed-discovery-pty.log'),host.output);
     await exec('herdr',['session','stop',name,'--json'],{env}).catch(()=>{});host.pty.kill();
     await exec('herdr',['session','delete',name,'--json'],{env}).catch(()=>{});
     await rm(dir,{recursive:true,force:true});

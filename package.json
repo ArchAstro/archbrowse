@@ -20,13 +20,14 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test test/*.test.ts",
     "test:e2e": "tsx test/harness/run.ts",
-    "check": "npm run typecheck && npm test && npm run test:e2e && npm run test:sessions",
+    "check": "npm run typecheck && npm test && npm run test:e2e && npm run test:sessions && npm run test:agent",
     "prepack": "npm run build",
     "pretest:e2e": "npm run build && node scripts/prepare-pty.mjs",
     "test:native": "npm run build && tsx test/harness/native.ts",
     "test:sessions": "npm run build && node scripts/prepare-pty.mjs && tsx test/harness/persistence.ts",
     "pretest:herdr": "npm run build && node scripts/prepare-pty.mjs",
-    "test:herdr": "tsx test/harness/herdr-run.ts"
+    "test:herdr": "tsx test/harness/herdr-run.ts",
+    "test:agent": "npm run build && node scripts/prepare-pty.mjs && tsx test/harness/agent.ts"
   },
   "dependencies": {
     "esbuild": "^0.25.0",
@@ -34,7 +35,8 @@
     "proper-lockfile": "^4.1.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "toml-eslint-parser": "^0.10.1"
+    "toml-eslint-parser": "^0.10.1",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

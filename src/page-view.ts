@@ -22,12 +22,14 @@ export class PageView {
         const page=index===0 ? first : await this.context.newPage();
         await page.goto(urls[index],{waitUntil:'domcontentloaded',timeout:30000});
       }
-      await this.activate(this.context.pages()[activeTab] ?? first);
+      // Reuse the stream when the restored active tab is already selected.
+      const active=this.context.pages()[activeTab] ?? first;
+      if(active!==this.page)await this.activate(active);
     }
     this.context.on('page',this.newPage);
   }
   private newPage = (page:Page) => {
-    this.queue(async()=> { if(!page.isClosed()) await this.activate(page); });
+    this.queue(async()=> { if(!page.isClosed() && page!==this.page) await this.activate(page); });
   };
   async activate(page:Page) {
     if(page.isClosed() || this.disposed) return;
@@ -56,10 +58,23 @@ export class PageView {
     });
     await cdp.send('Page.startScreencast',{format:'png',everyNthFrame:1});
   }
+  get generation(){return this.revision;}
   private known=new WeakSet<Page>();
   async resize() {
     const size=this.size(), old=this.page.viewportSize();
-    if(old?.width!==size.width || old?.height!==size.height) { this.frame=undefined; await this.page.setViewportSize(size); }
+    if(old?.width!==size.width || old?.height!==size.height) {
+      await this.page.setViewportSize(size);
+      // A static page may not emit another screencast frame after metrics change.
+      // Capture the resized surface once; subsequent paints still use the stream.
+      let timer:ReturnType<typeof setTimeout>|undefined;
+      try {
+        const frame=await Promise.race([
+          this.cdp!.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false}),
+          new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new Error('Chromium did not capture the resized viewport.')),5000);}),
+        ]);
+        this.frame=Buffer.from(frame.data,'base64');
+      }finally{clearTimeout(timer);}
+    }
   }
   async dispatch(event:Input) {
     if(event.type==='key') {

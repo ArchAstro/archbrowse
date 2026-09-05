@@ -173,6 +173,7 @@ try {
     await step('Real HerdR existing client: reload cannot change startup graphics flag',()=>testHerdr(browser!,endpoint,artifacts,true));
     await step('Real HerdR setup: accept config update and reload',()=>testHerdr(browser!,endpoint,artifacts,false,'accept'));
     await step('Real HerdR setup: decline leaves config untouched',()=>testHerdr(browser!,endpoint,artifacts,false,'decline'));
+    await step('Agent commands drive a live named session through real HerdR',()=>testHerdr(browser!,endpoint,artifacts,false,undefined,false,true));
     await step('Real HerdR small-link click at 21×48 cell pixels',()=>testHerdr(browser!,endpoint,artifacts,false,undefined,true));
     if(process.env.REACT_KITTY_WEB_SMOKE)await step('Live Example Domain Learn more link through HerdR',()=>testHerdr(browser!,endpoint,artifacts,false,undefined,'live'));
   }
