@@ -75,7 +75,7 @@ export class KittyHost {
 export async function rpc(socket:string,method:string,params:unknown):Promise<any>{
   return new Promise((resolve,reject)=>{const client=createConnection(socket,()=>client.write(JSON.stringify({id:'herdr-test',method,params})+'\n'));let data='';client.on('data',chunk=>{data+=chunk;const end=data.indexOf('\n');if(end>=0){client.end();const reply=JSON.parse(data.slice(0,end));if(reply.error)reject(new Error(JSON.stringify(reply.error)));else resolve(reply.result);}});client.on('error',reject);client.setTimeout(5000,()=>{client.destroy();reject(new Error('HerdR API timeout'));});});
 }
-export async function testHerdr(browser:Browser,endpoint:string,artifacts:string,legacy=false,setup?:'accept'|'decline',link:boolean|'live'=false,agent=false){
+export async function testHerdr(browser:Browser,endpoint:string,artifacts:string,legacy=false,setup?:'accept'|'decline',link:boolean|'live'=false,agent=false,startup=false){
   const dir=await mkdtemp(join(tmpdir(),'archbrowse-herdr-e2e-'));const name=`archbrowse-test-${process.pid}-${Date.now()}`;
   const config=join(dir,'config.toml');await writeFile(config,`onboarding = false\n[experimental]\nkitty_graphics = ${!legacy&&!setup}\n`);
   const env:NodeJS.ProcessEnv={...process.env,HERDR_ENV:'',HERDR_PANE_ID:'',HERDR_SOCKET_PATH:'',HERDR_SESSION:'',HERDR_CONFIG_PATH:config,ARCHBROWSE_SESSIONS_DIR:join(dir,'react-sessions'),TERM:'xterm-ghostty',TERM_PROGRAM:'ghostty'};
@@ -114,7 +114,8 @@ export async function testHerdr(browser:Browser,endpoint:string,artifacts:string
     await writeFile(join(artifacts,slug+'-browser.png'),reference!);await writeFile(join(artifacts,slug+'-terminal.png'),host.frame!);
   }
   try{
-    if(!legacy&&!setup&&!link&&!agent) {
+    if(startup) {
+      host.releaseDimensions();
       startupServer=createServer((_request,response)=>{void (async()=>{
         if(!startupResize) {
           startupResize=true;
@@ -183,10 +184,10 @@ export async function testHerdr(browser:Browser,endpoint:string,artifacts:string
     if(link){
       await page!.waitForSelector('a');
       const info=await rpc(socket,'pane.graphics.info',{pane_id:pane});assert.equal(info.pixel_mouse,true,'real HerdR pixel capability from PTY ioctl');
+      await capture(link==='live'?'27-herdr-live-link':'25-herdr-small-link');
       const box=await page!.locator('a').boundingBox();assert.ok(box);
       const quantizedY=(Math.floor((box.y+box.height/2)/host.cellHeight)+.5)*host.cellHeight;
       assert.ok(quantizedY<box.y || quantizedY>box.y+box.height,'cell-mode would miss the small link');
-      await capture(link==='live'?'27-herdr-live-link':'25-herdr-small-link');
       await page!.evaluate(()=>{(window as any).__pointer=[];for(const type of ['mousedown','mouseup','click'])addEventListener(type,event=>{const e=event as MouseEvent;(window as any).__pointer.push({type:e.type,x:e.clientX,y:e.clientY,target:(e.target as Element)?.outerHTML.slice(0,120)});},true);});
       if(link!=='live')await page!.route('https://iana.org/domains/example',route=>route.fulfill({contentType:'text/html',body:'<h1>Example domains destination</h1>'}));
       host.click(box.x+box.width/2,box.y+box.height/2);
@@ -195,8 +196,12 @@ export async function testHerdr(browser:Browser,endpoint:string,artifacts:string
       await rpc(socket,'pane.send_keys',{pane_id:pane,keys:['ctrl+q']});await waitFor(()=>page!.isClosed(),'link CLI exit');
       return;
     }
-    await page!.waitForSelector('#counter');await capture('22-herdr-render');
-    assert.ok(startupResize,'pane resized while initial navigation was pending');
+    await page!.waitForSelector('#counter');await capture(startup?'30-herdr-startup-resize':'22-herdr-render');
+    if(startup){
+      assert.ok(startupResize,'pane resized while initial navigation was pending');
+      await rpc(socket,'pane.send_keys',{pane_id:pane,keys:['ctrl+q']});await waitFor(()=>page!.isClosed(),'startup resize CLI exit');
+      return;
+    }
     host.releaseDimensions();
     const box=await page!.locator('#counter').boundingBox();assert.ok(box);host.click(box.x+box.width/2,box.y+box.height/2);
     await page!.waitForFunction(()=>document.querySelector('#count')?.textContent==='1');await capture('23-herdr-click');
@@ -207,7 +212,7 @@ export async function testHerdr(browser:Browser,endpoint:string,artifacts:string
   }finally{
     if(startupServer){startupServer.closeAllConnections();await new Promise<void>(resolve=>startupServer!.close(()=>resolve()));}
     if(link&&page&&!page.isClosed())await writeFile(join(artifacts,link==='live'?'herdr-live-link-evidence.json':'herdr-link-evidence.json'),JSON.stringify({pixelMouse:host.pixelMouse,url:page.url(),events:await page.evaluate(()=>(window as any).__pointer).catch(()=>[])},null,2));
-    await writeFile(join(artifacts,agent?'herdr-agent-pty.log':link==='live'?'herdr-live-link-pty.log':link?'herdr-link-pty.log':setup?`herdr-setup-${setup}-pty.log`:legacy?'herdr-legacy-client-pty.log':'herdr-delayed-discovery-pty.log'),host.output);
+    await writeFile(join(artifacts,startup?'herdr-startup-resize-pty.log':agent?'herdr-agent-pty.log':link==='live'?'herdr-live-link-pty.log':link?'herdr-link-pty.log':setup?`herdr-setup-${setup}-pty.log`:legacy?'herdr-legacy-client-pty.log':'herdr-delayed-discovery-pty.log'),host.output);
     await exec('herdr',['session','stop',name,'--json'],{env}).catch(()=>{});host.pty.kill();
     await exec('herdr',['session','delete',name,'--json'],{env}).catch(()=>{});
     await rm(dir,{recursive:true,force:true});

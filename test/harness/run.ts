@@ -179,6 +179,7 @@ try {
   });
   if(herdrTest==='1') {
     await step('Real HerdR cold start: no pre-seeded dimensions, outer pixels, mouse and resize',()=>testHerdr(browser!,endpoint,artifacts));
+    await step('Real HerdR resize while initial navigation is pending',()=>testHerdr(browser!,endpoint,artifacts,false,undefined,false,false,true));
     await step('Real HerdR existing client: reload cannot change startup graphics flag',()=>testHerdr(browser!,endpoint,artifacts,true));
     await step('Real HerdR setup: accept config update and reload',()=>testHerdr(browser!,endpoint,artifacts,false,'accept'));
     await step('Real HerdR setup: decline leaves config untouched',()=>testHerdr(browser!,endpoint,artifacts,false,'decline'));
