@@ -1,6 +1,6 @@
 ---
 name: archbrowse
-description: Install and configure ArchBrowse, open React apps, HTML files or websites in a terminal using saved layout and session preferences, and drive the live page through snapshots and refs. Use for ArchBrowse setup, terminal browser previews, or agent control of a ArchBrowse session.
+description: Install and configure ArchBrowse, open React apps, HTML files or websites in a terminal using saved layout and session preferences, and drive the live page through snapshots and refs. Use for ArchBrowse setup, terminal browser previews, or agent control of an ArchBrowse session.
 ---
 
 # ArchBrowse

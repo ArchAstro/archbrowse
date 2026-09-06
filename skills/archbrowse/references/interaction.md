@@ -22,7 +22,7 @@ archbrowse --session NAME wait --url '**/dashboard'
 archbrowse --session NAME snapshot -i
 ```
 
-Prefer product conditions over sleeping or `networkidle` (which is not a ArchBrowse wait option). `--timeout MS` is 1–30000, default 10000. Waits do not prevent human terminal input.
+Prefer product conditions over sleeping or `networkidle` (which is not an ArchBrowse wait option). `--timeout MS` is 1–30000, default 10000. Waits do not prevent human terminal input.
 
 ```sh
 archbrowse --session NAME get text REF
