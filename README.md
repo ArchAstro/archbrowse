@@ -276,7 +276,7 @@ Terminal cell/pixel dimensions and pixel mouse support are queried. SGR cell mou
 
 [GitHub Actions CI](https://github.com/ArchAstro/archbrowse/actions/workflows/ci.yml) runs on pull requests, pushes to `main` and `feat/**`, and manual dispatch. It checks Node 22 and 24 on Linux and Node 22 on macOS: typechecking, unit tests, real PTY/browser pixel parity, persistent sessions, agent control, and installation of the packed production CLI with its aliases and bundled skill. Chromium is provisioned explicitly from the locked Playwright version. Screenshot reports and terminal transcripts are retained as workflow artifacts for seven days.
 
-Run `npm run test:package` locally to verify the distributable. The actual HerdR integration (`test:herdr` and `test:skill`) requires a local HerdR installation and remains separate, as does the manual native Ghostty capture.
+Run `npm run test:package` locally to verify the distributable. Node 22 CI also runs the actual HerdR integration (`test:herdr` and `test:skill`) on Linux and macOS using checksum-verified upstream HerdR 0.8.2 binaries. These exercise graphics, high-DPI clicks, configuration prompts, agent control, and bootstrapping with saved split/tab preferences inside isolated PTYs. Locally they require HerdR on PATH. Native Ghostty capture remains a separate manual check.
 
 ```fish
 npm run check

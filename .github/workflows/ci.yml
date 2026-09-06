@@ -71,6 +71,20 @@ jobs:
         run: npm run check
       - name: Verify installed package and bundled skill
         run: npm run test:package
+      - name: Install pinned HerdR
+        if: matrix.node == '22'
+        run: node scripts/install-ci-herdr.mjs
+      - name: Test real HerdR graphics and input in a PTY
+        if: matrix.node == '22'
+        run: npm run test:herdr
+      - name: Bootstrap ArchBrowse and test saved HerdR preferences
+        if: matrix.node == '22'
+        env:
+          ARCHBROWSE_INSTALL_DIR: ${{ runner.temp }}/archbrowse-cli
+          ARCHBROWSE_BIN_DIR: ${{ runner.temp }}/archbrowse-bin
+        run: |
+          node skills/archbrowse/scripts/bootstrap.mjs install --source "$GITHUB_WORKSPACE"
+          npm run test:skill
       - name: Upload browser and terminal evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
