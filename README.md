@@ -14,7 +14,15 @@ Use **Node 22+** and a terminal implementing Kitty graphics, such as Kitty or Gh
 
 ## Agent skill and first-use setup
 
-The bundled [Starpane skill](skills/starpane/SKILL.md) can install the CLI, collect terminal/layout/session preferences, and teach an agent to launch and control a viewer. Install the `skills/starpane` folder in your agent's skill directory; it is also included in the npm package. An installed CLI can print the entrypoint with `starpane --skill`.
+Install the agent skill directly from this repository:
+
+```fish
+npx skills add calvin-archastro/starpane --skill starpane
+```
+
+Add `--global` for user-wide installation, or `--agent codex` to select Codex explicitly. The repository is currently private, so your GitHub account needs access.
+
+The bundled [Starpane skill](skills/starpane/SKILL.md) is discoverable at `skills/starpane/`. It includes its bootstrap installer, saved-preference helper and usage references. It can install the CLI, collect terminal/layout/session preferences, and teach an agent to launch and control a viewer. The skill is also included in the npm package; `starpane --skill` prints its entrypoint.
 
 Bootstrap from a checkout:
 
