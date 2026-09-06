@@ -75,9 +75,9 @@ async function rpc(socket:string,method:string,params:unknown):Promise<any>{
   return new Promise((resolve,reject)=>{const client=createConnection(socket,()=>client.write(JSON.stringify({id:'herdr-test',method,params})+'\n'));let data='';client.on('data',chunk=>{data+=chunk;const end=data.indexOf('\n');if(end>=0){client.end();const reply=JSON.parse(data.slice(0,end));if(reply.error)reject(new Error(JSON.stringify(reply.error)));else resolve(reply.result);}});client.on('error',reject);client.setTimeout(5000,()=>{client.destroy();reject(new Error('HerdR API timeout'));});});
 }
 export async function testHerdr(browser:Browser,endpoint:string,artifacts:string,legacy=false,setup?:'accept'|'decline',link:boolean|'live'=false,agent=false){
-  const dir=await mkdtemp(join(tmpdir(),'rk-herdr-e2e-'));const name=`rk-test-${process.pid}-${Date.now()}`;
+  const dir=await mkdtemp(join(tmpdir(),'starpane-herdr-e2e-'));const name=`starpane-test-${process.pid}-${Date.now()}`;
   const config=join(dir,'config.toml');await writeFile(config,`onboarding = false\n[experimental]\nkitty_graphics = ${!legacy&&!setup}\n`);
-  const env:NodeJS.ProcessEnv={...process.env,HERDR_ENV:'',HERDR_PANE_ID:'',HERDR_SOCKET_PATH:'',HERDR_SESSION:'',HERDR_CONFIG_PATH:config,REACT_KITTY_SESSIONS_DIR:join(dir,'react-sessions'),TERM:'xterm-ghostty',TERM_PROGRAM:'ghostty'};
+  const env:NodeJS.ProcessEnv={...process.env,HERDR_ENV:'',HERDR_PANE_ID:'',HERDR_SOCKET_PATH:'',HERDR_SESSION:'',HERDR_CONFIG_PATH:config,STARPANE_SESSIONS_DIR:join(dir,'react-sessions'),TERM:'xterm-ghostty',TERM_PROGRAM:'ghostty'};
   // This is a local outer terminal, independent of the shell running the tests.
   for(const name of ['SSH_CONNECTION','SSH_TTY','TMUX','STY','HERDR_REMOTE_KEYBINDINGS'])delete env[name];
   const host=new KittyHost(name,env,link?join(dir,'tty'):undefined);let socket='',page:Page|undefined;

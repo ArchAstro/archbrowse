@@ -1,4 +1,5 @@
 import { mkdir, readFile, readdir, rename, rm, writeFile, chmod, stat } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -11,7 +12,12 @@ export interface SessionRecord {
   mobile?:{width:number;height:number}; tabs:string[]; activeTab:number;
 }
 export function sessionsRoot() {
-  return resolve(process.env.REACT_KITTY_SESSIONS_DIR ?? join(process.env.XDG_DATA_HOME ?? join(homedir(),'.local','share'),'react-kitty','sessions'));
+  const override=process.env.STARPANE_SESSIONS_DIR ?? process.env.REACT_KITTY_SESSIONS_DIR;
+  if(override)return resolve(override);
+  const base=process.env.XDG_DATA_HOME ?? join(homedir(),'.local','share');
+  const current=join(base,'starpane','sessions'),legacy=join(base,'react-kitty','sessions');
+  // Keep existing profiles, locks and live agent sockets in place during upgrade.
+  return resolve(!existsSync(current)&&existsSync(legacy)?legacy:current);
 }
 export function validateSessionName(name:string) {
   if(!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(name)) throw new Error('Session names must be 1–64 lowercase letters, digits, underscores or hyphens, starting with a letter or digit.');

@@ -23,7 +23,7 @@ async function request(socket:string,method:string,params:Record<string,unknown>
   return new Promise((resolve,reject)=> {
     const client=createConnection(socket);let text='';
     const error=(e:Error)=>{client.removeAllListeners();client.destroy();reject(e);};
-    client.on('connect',()=>client.write(JSON.stringify({id:'react-kitty:graphics',method,params})+'\n'));
+    client.on('connect',()=>client.write(JSON.stringify({id:'starpane:graphics',method,params})+'\n'));
     client.on('data',chunk=>{
       text+=chunk.toString();
       if(text.length>1024*1024) {error(new Error('HerdR capability response is too large.'));return;}
@@ -81,7 +81,7 @@ export class HerdrGraphics {
   static async open(failed:(error:Error)=>void,env:NodeJS.ProcessEnv=process.env,options:DiscoveryOptions={}):Promise<HerdrGraphics|undefined> {
     const target=address(env);if(!target)return;
     await checkHerdrGraphics(env,options);
-    const {reply,client}=await request(target.socket,'pane.graphics.stream',{pane_id:target.pane,layer_id:'react-kitty'},true);
+    const {reply,client}=await request(target.socket,'pane.graphics.stream',{pane_id:target.pane,layer_id:'starpane'},true);
     const error=failure(reply);if(error){client.destroy();throw error;}
     return new HerdrGraphics(target.socket,target.pane,client,failed);
   }

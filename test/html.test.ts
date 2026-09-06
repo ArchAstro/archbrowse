@@ -14,7 +14,7 @@ test('website normalization distinguishes URLs, local files and unsupported sche
   await assert.rejects(()=>resolveTarget('ftp://example.com'),/Supported URL schemes/);
 });
 test('HTML server preserves content, relative paths, modules, ranges, HEAD and root isolation',async()=> {
-  const root=await mkdtemp(join(tmpdir(),'react-kitty-html-'));
+  const root=await mkdtemp(join(tmpdir(),'starpane-html-'));
   let server:Awaited<ReturnType<typeof serveHtml>>|undefined;
   try {
     await mkdir(join(root,'pages')); await mkdir(join(root,'assets'));

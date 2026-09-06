@@ -1,9 +1,10 @@
 {
-  "name": "react-kitty",
+  "name": "starpane",
   "version": "0.1.0",
-  "description": "Live React and web pages rendered by Chromium in Kitty graphics terminals",
+  "description": "A browser in your terminal, shared with your agent",
   "type": "module",
   "bin": {
+    "starpane": "dist/cli.js",
     "react-kitty": "dist/cli.js"
   },
   "files": [
@@ -48,5 +49,13 @@
     "pngjs": "^7.0.0",
     "tsx": "^4.20.0",
     "typescript": "^5.9.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/calvin-archastro/starpane.git"
+  },
+  "homepage": "https://github.com/calvin-archastro/starpane#readme",
+  "bugs": {
+    "url": "https://github.com/calvin-archastro/starpane/issues"
   }
 }

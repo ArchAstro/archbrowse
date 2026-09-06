@@ -11,9 +11,11 @@ import { chromium, type Browser, type Page } from 'playwright-core';
 import { findChromium } from '../../src/browser.js';
 import { writeReport } from './report.js';
 import { Terminal, waitFor, samePixels } from './terminal.js';
+const webSmoke=process.env.STARPANE_WEB_SMOKE ?? process.env.REACT_KITTY_WEB_SMOKE;
+const herdrTest=process.env.STARPANE_HERDR_TEST ?? process.env.REACT_KITTY_HERDR_TEST;
 const artifacts = resolve('artifacts', new Date().toISOString().replaceAll(':','-'));
 await mkdir(artifacts,{recursive:true});
-const profile = await mkdtemp(join(tmpdir(),'react-kitty-browser-'));
+const profile = await mkdtemp(join(tmpdir(),'starpane-browser-'));
 // Put generated entry next to the package so normal dependency resolution is exercised.
 const fixtureDir = await mkdtemp(resolve('test/generated-'));
 await cp('examples/html',join(fixtureDir,'html'),{recursive:true});
@@ -25,7 +27,7 @@ const child = spawn(executable,['--headless=new','--remote-debugging-port=0',`--
 let endpoint = '', browser:Browser | undefined, terminal:Terminal | undefined, page:Page | undefined;
 const terminals: Terminal[] = [];
 const cleanup: (()=>Promise<unknown>)[]=[];
-let logs = '', report = '# React Kitty browser / PTY verification\n\n';
+let logs = '', report = '# Starpane browser / PTY verification\n\n';
 child.stderr.on('data',chunk => { logs+=chunk; endpoint = /DevTools listening on (ws:\/\/\S+)/.exec(logs)?.[1] ?? endpoint; });
 async function step(name:string, fn:()=>Promise<void>) { console.log(name); report += `1. ${name}\n`; await fn(); }
 async function capture(name:string) {
@@ -163,19 +165,19 @@ try {
     await page!.waitForFunction(()=>document.querySelector('#count')?.textContent==='1');
     await capture('20-website-redirect'); await terminal!.close();
   });
-  if(process.env.REACT_KITTY_WEB_SMOKE) await step('Live public HTTPS website smoke',async()=> {
-    await boot(process.env.REACT_KITTY_WEB_SMOKE!,false,true,'h1');
+  if(webSmoke) await step('Live public HTTPS website smoke',async()=> {
+    await boot(webSmoke!,false,true,'h1');
     assert.ok((await page!.locator('h1').first().innerText()).length>0);
     await capture('21-public-website'); await terminal!.close();
   });
-  if(process.env.REACT_KITTY_HERDR_TEST==='1') {
+  if(herdrTest==='1') {
     await step('Real HerdR cold start: no pre-seeded dimensions, outer pixels, mouse and resize',()=>testHerdr(browser!,endpoint,artifacts));
     await step('Real HerdR existing client: reload cannot change startup graphics flag',()=>testHerdr(browser!,endpoint,artifacts,true));
     await step('Real HerdR setup: accept config update and reload',()=>testHerdr(browser!,endpoint,artifacts,false,'accept'));
     await step('Real HerdR setup: decline leaves config untouched',()=>testHerdr(browser!,endpoint,artifacts,false,'decline'));
     await step('Agent commands drive a live named session through real HerdR',()=>testHerdr(browser!,endpoint,artifacts,false,undefined,false,true));
     await step('Real HerdR small-link click at 21×48 cell pixels',()=>testHerdr(browser!,endpoint,artifacts,false,undefined,true));
-    if(process.env.REACT_KITTY_WEB_SMOKE)await step('Live Example Domain Learn more link through HerdR',()=>testHerdr(browser!,endpoint,artifacts,false,undefined,'live'));
+    if(webSmoke)await step('Live Example Domain Learn more link through HerdR',()=>testHerdr(browser!,endpoint,artifacts,false,undefined,'live'));
   }
   await step('Attached Chromium remains alive after CLI cleanup',async()=> { assert.equal(browser!.isConnected(),true); assert.equal(browser!.contexts().length,1); });
   report += '\nPASS — all scenarios passed.\n';

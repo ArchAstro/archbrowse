@@ -5,26 +5,26 @@ import { parseArgs } from 'node:util';
 import { runSession } from './session.js';
 import { listSessions, deleteSession } from './sessions.js';
 import { installBrowser } from './browser.js';
-const help = `react-kitty — React and websites in your terminal
+const help = `starpane — React and websites in your terminal
 
-  react-kitty ./App.tsx             Live React entry (default export or App)
-  react-kitty ./app.jsx             JSX / JS / TS also accepted
-  react-kitty ./index.html         Local HTML with relative assets and live reload
-  react-kitty https://example.com   Any HTTP(S) website
-  react-kitty example.com           Bare domains default to HTTPS
-  react-kitty localhost:3000        Local dev server
-  react-kitty ./App.tsx --mobile    390 × 844 CSS pixels + touch emulation
+  starpane ./App.tsx             Live React entry (default export or App)
+  starpane ./app.jsx             JSX / JS / TS also accepted
+  starpane ./index.html         Local HTML with relative assets and live reload
+  starpane https://example.com   Any HTTP(S) website
+  starpane example.com           Bare domains default to HTTPS
+  starpane localhost:3000        Local dev server
+  starpane ./App.tsx --mobile    390 × 844 CSS pixels + touch emulation
 
-  react-kitty example.com --session work  Create/reuse a saved browser profile
-  react-kitty --session work              Reopen saved pages
-  react-kitty sessions list               List named sessions
-  react-kitty sessions delete work        Delete an inactive profile
+  starpane example.com --session work  Create/reuse a saved browser profile
+  starpane --session work              Reopen saved pages
+  starpane sessions list               List named sessions
+  starpane sessions delete work        Delete an inactive profile
 
-  react-kitty attach work                 Inspect a live session
-  react-kitty --session work snapshot -i  Discover interactive refs
-  react-kitty --session work click @REF   Drive the visible page
-  react-kitty --session work fill @REF TEXT
-  react-kitty --session work screenshot page.png
+  starpane attach work                 Inspect a live session
+  starpane --session work snapshot -i  Discover interactive refs
+  starpane --session work click @REF   Drive the visible page
+  starpane --session work fill @REF TEXT
+  starpane --session work screenshot page.png
 
   Agent commands: attach, snapshot, read, click, dblclick, hover, focus,
     fill, type, press, check, uncheck, select, scroll, get, wait, screenshot,
@@ -88,6 +88,6 @@ try {
 } catch (error) {
   const message=error instanceof Error?error.message:String(error);
   if(jsonOutput)process.stdout.write(JSON.stringify({ok:false,error:{code:error instanceof AgentError?error.code:'command_failed',message}})+'\n');
-  else process.stderr.write(`react-kitty: ${message}\n`);
+  else process.stderr.write(`starpane: ${message}\n`);
   process.exitCode=1;
 }

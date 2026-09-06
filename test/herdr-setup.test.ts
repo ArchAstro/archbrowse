@@ -24,7 +24,7 @@ test('TOML edits preserve comments and support tables, dotted keys, inline and q
   assert.throws(()=>enableGraphics('[invalid'));
 });
 test('setup declines safely, backs up on approval, preserves symlinks and detects concurrent edits',async()=> {
-  const root=await mkdtemp(join(tmpdir(),'rk-config-test-'));const target=join(root,'dotfile.toml'),config=join(root,'config.toml');
+  const root=await mkdtemp(join(tmpdir(),'starpane-config-test-'));const target=join(root,'dotfile.toml'),config=join(root,'config.toml');
   const original='[theme]\nname="tokyo-night" # keep\n';await writeFile(target,original);await symlink(target,config);
   const env={HERDR_CONFIG_PATH:config};const error=new HerdrCapabilityError('feature_disabled','disabled');let reloads=0;
   try{

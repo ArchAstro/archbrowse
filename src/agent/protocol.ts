@@ -9,6 +9,7 @@ export class AgentError extends Error {constructor(public code:string,message:st
 export function agentSocket(name:string) {
   validateSessionName(name);
   const path=join(sessionsRoot(),name,'agent.sock');
+  // Transport addresses stay stable so renamed clients can attach to older viewers.
   if(process.platform==='win32')return '\\\\.\\pipe\\react-kitty-'+createHash('sha256').update(path).digest('hex').slice(0,32);
   const socket=Buffer.byteLength(path)>100?join(tmpdir(),'rk-'+createHash('sha256').update(path).digest('hex').slice(0,16),'s'):path;
   if(Buffer.byteLength(socket)>100)throw new AgentError('socket_path_too_long','Runtime socket path is too long. Use a shorter TMPDIR.');

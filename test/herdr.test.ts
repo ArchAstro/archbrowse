@@ -7,8 +7,8 @@ import { join } from 'node:path';
 import { checkHerdrGraphics } from '../src/herdr.js';
 
 test('HerdR disabled rendering fails despite the virtual terminal Kitty OK reply',async()=> {
-  const dir=await mkdtemp(join(tmpdir(),'rk-herdr-'));
-  const socket=join(dir,'api.sock');let pending=0;let requests=0;let response:unknown={id:'react-kitty:graphics',error:{code:'feature_disabled',message:'pane graphics require experimental.kitty_graphics'}};
+  const dir=await mkdtemp(join(tmpdir(),'starpane-herdr-'));
+  const socket=join(dir,'api.sock');let pending=0;let requests=0;let response:unknown={id:'starpane:graphics',error:{code:'feature_disabled',message:'pane graphics require experimental.kitty_graphics'}};
   const server=createServer(client=>client.once('data',data=> {
     const request=JSON.parse(data.toString());assert.equal(request.params.pane_id,'w1:p2');
     requests++;const result=pending-->0 ? {error:{code:'cell_size_unavailable',message:'negotiating'}} : response;

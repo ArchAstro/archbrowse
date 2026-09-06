@@ -55,8 +55,8 @@ export async function applyHerdrSetup(plan:Awaited<ReturnType<typeof planHerdrSe
   if(current!==(plan.exists?plan.original:undefined))throw new Error('HerdR config changed while the prompt was open. Rerun to review the current file.');
   await mkdir(dirname(plan.path),{recursive:true});
   const mode=plan.exists?(await stat(plan.path)).mode&0o777:0o600;
-  const backup=plan.exists?`${plan.path}.react-kitty-${randomUUID()}.bak`:undefined;
-  const temp=`${plan.path}.react-kitty-${randomUUID()}.tmp`;
+  const backup=plan.exists?`${plan.path}.starpane-${randomUUID()}.bak`:undefined;
+  const temp=`${plan.path}.starpane-${randomUUID()}.tmp`;
   try{
     if(backup)await writeFile(backup,plan.original,{flag:'wx',mode:0o600});
     await writeFile(temp,plan.text,{flag:'wx',mode});await chmod(temp,mode);await rename(temp,plan.path);
