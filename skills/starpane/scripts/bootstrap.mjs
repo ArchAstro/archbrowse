@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
 import { promisify, parseArgs } from 'node:util';
 const exec=promisify(execFile);
-const repository='calvin-archastro/starpane';
+const repository='ArchAstro/starpane';
 function paths(env=process.env){const data=env.XDG_DATA_HOME??join(homedir(),'.local','share');return {install:resolve(env.STARPANE_INSTALL_DIR??join(data,'starpane','cli')),bin:resolve(env.STARPANE_BIN_DIR??join(homedir(),'.local','bin'))};}
 async function exists(path){try{await access(path);return true;}catch{return false;}}
 async function verify(command){try{const {stdout}=await exec(command[0],[...command.slice(1),'--help'],{timeout:15000});return stdout.startsWith('starpane —')&&stdout.includes('snapshot');}catch{return false;}}

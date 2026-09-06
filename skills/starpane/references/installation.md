@@ -18,7 +18,7 @@ node "$STARPANE_SKILL_DIR/scripts/bootstrap.mjs" install --source "$STARPANE_WOR
 The helper:
 
 1. Reuses a verified Starpane CLI from PATH or its managed installation.
-2. Uses an enclosing Starpane checkout when the skill lives in the repo. Otherwise it fetches `calvin-archastro/starpane` with `gh repo clone`. The repository is currently private: authenticated access is required. Stop at an authentication/access failure and explain it; do not switch to an unrelated npm package.
+2. Uses an enclosing Starpane checkout when the skill lives in the repo. Otherwise it fetches `ArchAstro/starpane` with `gh repo clone`. The repository is currently private: authenticated access is required. Stop at an authentication/access failure and explain it; do not switch to an unrelated npm package.
 3. Builds the source, packs it and installs production dependencies under `~/.local/share/starpane/cli` (or `$XDG_DATA_HOME/starpane/cli`). It skips dependency lifecycle scripts and does not download Chromium during installation.
 4. Creates `~/.local/bin/starpane` on Unix, refusing to overwrite an unrelated file. It returns an absolute `command` vector, so the agent can proceed without editing shell startup files.
 

@@ -17,7 +17,7 @@ Use **Node 22+** and a terminal implementing Kitty graphics, such as Kitty or Gh
 Install the agent skill directly from this repository:
 
 ```fish
-npx skills add calvin-archastro/starpane --skill starpane
+npx skills add ArchAstro/starpane --skill starpane
 ```
 
 Add `--global` for user-wide installation, or `--agent codex` to select Codex explicitly. The repository is currently private, so your GitHub account needs access.

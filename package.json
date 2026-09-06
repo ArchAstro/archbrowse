@@ -54,10 +54,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/calvin-archastro/starpane.git"
+    "url": "git+https://github.com/ArchAstro/starpane.git"
   },
-  "homepage": "https://github.com/calvin-archastro/starpane#readme",
+  "homepage": "https://github.com/ArchAstro/starpane#readme",
   "bugs": {
-    "url": "https://github.com/calvin-archastro/starpane/issues"
+    "url": "https://github.com/ArchAstro/starpane/issues"
   }
 }
