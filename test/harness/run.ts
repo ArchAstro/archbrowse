@@ -131,9 +131,13 @@ try {
     terminal!.write('\x1b[1;3D'); await page!.waitForSelector('#counter');
     terminal!.write('\x1b[1;3C'); await page!.waitForSelector('#destination');
     terminal!.write('\x1b[1;3D'); await page!.waitForSelector('#counter');
+    const countBeforeReload=Number(await page!.locator('#count').innerText());
     await click('#counter');
+    await page!.waitForFunction(expected=>Number(document.querySelector('#count')?.textContent)===expected,countBeforeReload+1);
     terminal!.write('\x1b[15~'); await page!.waitForFunction(()=>document.querySelector('#count')?.textContent==='0');
-    await click('#name'); terminal!.write('\x1b[200~HTML User\x1b[201~'); await click('#submit');
+    await click('#name'); terminal!.write('\x1b[200~HTML User\x1b[201~');
+    await page!.waitForFunction(()=>document.querySelector<HTMLInputElement>('#name')?.value==='HTML User');
+    await click('#submit');
     await page!.waitForFunction(()=>document.querySelector('#result')?.textContent==='Hello, HTML User.');
     await capture('13-html-form');
     terminal!.write('\x1b[1;3D'); await page!.waitForSelector('#counter');
