@@ -62,6 +62,9 @@ export async function runSession(options: SessionOptions) {
     }
   }
   try {
+    // HerdR can finish laying out its pane while browser startup/navigation is
+    // awaiting I/O. Retain those resize events before the first frame is sent.
+    stdout.on('resize', onResize);
     const openHerdr=()=>HerdrGraphics.open(error=>{failure=error;stop();},process.env,{signal:outputAbort.signal,onWaiting:()=>process.stderr.write('Waiting for HerdR to discover host pixel dimensions…\n')});
     try { herdr=await openHerdr(); }
     catch(error) {
@@ -105,7 +108,6 @@ export async function runSession(options: SessionOptions) {
     }
     ready=true;
     stdin.setRawMode(true); stdin.resume(); stdin.on('data', onData);
-    stdout.on('resize', onResize);
     entered = true; await write(enterTerminal + (herdr ? (pixel ? '\x1b[?1016h' : '') : graphicsQuery + geometryQuery));
     // Query responses share stdin with user events. A bounded probe avoids hanging old terminals.
     for (let n = 0; n < 20 && !herdr && graphics === undefined && !stopped; n++) await delay(25);

@@ -6,7 +6,7 @@ import { mkdtemp, writeFile, rm, readFile, readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createConnection } from 'node:net';
-import type { Browser, Page } from 'playwright-core';
+import type { Browser, Page, Route } from 'playwright-core';
 import { PNG } from 'pngjs';
 import { waitFor, samePixels } from './terminal.js';
 const exec=promisify(execFile);
@@ -82,6 +82,18 @@ export async function testHerdr(browser:Browser,endpoint:string,artifacts:string
   for(const name of ['SSH_CONNECTION','SSH_TTY','TMUX','STY','HERDR_REMOTE_KEYBINDINGS'])delete env[name];
   const host=new KittyHost(name,env,link?join(dir,'tty'):undefined);let socket='',page:Page|undefined;
   const before=new Set(browser.contexts().flatMap(c=>c.pages()));
+  const context=browser.contexts()[0];
+  let startupResize=false;
+  const duringStartup=async(route:Route)=>{
+    if(!startupResize && route.request().isNavigationRequest()) {
+      startupResize=true;
+      await host.resize(130,48);
+      // Deliberately hold navigation open while SIGWINCH is delivered. This
+      // reproduces resizing before runSession has finished view.start().
+      await new Promise(resolve=>setTimeout(resolve,200));
+    }
+    await route.continue();
+  };
   async function capture(slug:string){
     let reference:Buffer;
     // HerdR can clip the initial full-terminal frame while its sidebar/pane
@@ -100,6 +112,7 @@ export async function testHerdr(browser:Browser,endpoint:string,artifacts:string
     await writeFile(join(artifacts,slug+'-browser.png'),reference!);await writeFile(join(artifacts,slug+'-terminal.png'),host.frame!);
   }
   try{
+    if(!legacy&&!setup&&!link&&!agent)await context.route('**/*',duringStartup);
     await waitFor(async()=>{const {stdout}=await exec('herdr',['session','list','--json'],{env});socket=JSON.parse(stdout).sessions.find((s:{name:string;running:boolean})=>s.name===name&&s.running)?.socket_path??'';return !!socket;},'isolated HerdR server');
     let pane='';await waitFor(async()=>{const snapshot=await rpc(socket,'session.snapshot',{});pane=snapshot.snapshot.panes[0]?.pane_id??'';return !!pane;},'HerdR pane');
     if(legacy){await waitFor(()=>host.output.includes('menu'),'HerdR client first paint before config reload');await assert.rejects(()=>rpc(socket,'pane.graphics.info',{pane_id:pane}),/feature_disabled/);host.releaseDimensions();await writeFile(config,'onboarding = false\n[experimental]\nkitty_graphics = true\n');await rpc(socket,'server.reload_config',{});}
@@ -169,6 +182,7 @@ export async function testHerdr(browser:Browser,endpoint:string,artifacts:string
       return;
     }
     await page!.waitForSelector('#counter');await capture('22-herdr-render');
+    assert.ok(startupResize,'pane resized while initial navigation was pending');
     host.releaseDimensions();
     const box=await page!.locator('#counter').boundingBox();assert.ok(box);host.click(box.x+box.width/2,box.y+box.height/2);
     await page!.waitForFunction(()=>document.querySelector('#count')?.textContent==='1');await capture('23-herdr-click');
@@ -177,6 +191,7 @@ export async function testHerdr(browser:Browser,endpoint:string,artifacts:string
     await rpc(socket,'pane.send_keys',{pane_id:pane,keys:['ctrl+q']});await waitFor(()=>page!.isClosed(),'CLI exit');
     await waitFor(()=>!host.frame,'CLI exit clears HerdR image layer');
   }finally{
+    await context.unroute('**/*',duringStartup);
     if(link&&page&&!page.isClosed())await writeFile(join(artifacts,link==='live'?'herdr-live-link-evidence.json':'herdr-link-evidence.json'),JSON.stringify({pixelMouse:host.pixelMouse,url:page.url(),events:await page.evaluate(()=>(window as any).__pointer).catch(()=>[])},null,2));
     await writeFile(join(artifacts,agent?'herdr-agent-pty.log':link==='live'?'herdr-live-link-pty.log':link?'herdr-link-pty.log':setup?`herdr-setup-${setup}-pty.log`:legacy?'herdr-legacy-client-pty.log':'herdr-delayed-discovery-pty.log'),host.output);
     await exec('herdr',['session','stop',name,'--json'],{env}).catch(()=>{});host.pty.kill();

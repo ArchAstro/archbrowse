@@ -11,6 +11,7 @@ export class PageView {
   private interaction:Interaction | undefined;
   private revision=0;
   private disposed=false;
+  private resizedSurface:{width:number;height:number}|undefined;
   constructor(private context:BrowserContext, private geometry:()=>Geometry, private pixel:()=>boolean, private mobile:boolean,
     private queue:(fn:()=>Promise<unknown>)=>void, private stop:()=>void, private size:()=>{width:number;height:number}) {}
 
@@ -36,7 +37,7 @@ export class PageView {
     if(this.interaction && !this.page.isClosed()) await this.interaction.dispatch({type:'focus',focused:false});
     const revision=++this.revision;
     if(this.cdp) { await this.cdp.send('Page.stopScreencast').catch(()=>{}); await this.cdp.detach().catch(()=>{}); }
-    this.frame=undefined; this.page=page;
+    this.frame=undefined; this.resizedSurface=undefined; this.page=page;
     page.setDefaultTimeout(5000);
     // Install once even when switching back to this page.
     if(!this.known.has(page)) {
@@ -53,7 +54,12 @@ export class PageView {
     const cdp=this.cdp=await this.context.newCDPSession(page);
     this.interaction=new Interaction(page,cdp,this.geometry,this.pixel,this.mobile);
     cdp.on('Page.screencastFrame',event=> {
-      if(revision===this.revision && !this.disposed) this.frame=Buffer.from(event.data,'base64');
+      if(revision===this.revision && !this.disposed) {
+        const frame=Buffer.from(event.data,'base64'), size=this.resizedSurface;
+        // An in-flight pre-resize screencast frame can arrive after the explicit
+        // resize capture. Never replace the new surface with old-size pixels.
+        if(!size || (frame.readUInt32BE(16)===size.width && frame.readUInt32BE(20)===size.height))this.frame=frame;
+      }
       void cdp.send('Page.screencastFrameAck',{sessionId:event.sessionId}).catch(()=>{});
     });
     await cdp.send('Page.startScreencast',{format:'png',everyNthFrame:1});
@@ -63,6 +69,7 @@ export class PageView {
   async resize() {
     const size=this.size(), old=this.page.viewportSize();
     if(old?.width!==size.width || old?.height!==size.height) {
+      this.resizedSurface=size;
       await this.page.setViewportSize(size);
       // A static page may not emit another screencast frame after metrics change.
       // Capture the resized surface once; subsequent paints still use the stream.
