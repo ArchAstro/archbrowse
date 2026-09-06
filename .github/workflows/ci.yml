@@ -52,6 +52,21 @@ jobs:
       # Always install: a cache hit does not supply Linux system libraries.
       - name: Install Chromium and system dependencies
         run: node node_modules/playwright-core/cli.js install --with-deps chromium
+      # Ubuntu restricts user namespaces for downloaded Chrome builds. Allow
+      # this exact executable to create its sandbox on the disposable runner.
+      # https://chromium.googlesource.com/chromium/src/+/main/docs/security/apparmor-userns-restrictions.md
+      - name: Allow Chromium sandbox on Ubuntu
+        if: runner.os == 'Linux'
+        run: |
+          chromium_path="$(node -p "require('playwright-core').chromium.executablePath()")"
+          sudo tee /etc/apparmor.d/archbrowse-ci-chromium > /dev/null <<EOF
+          abi <abi/4.0>,
+          include <tunables/global>
+          profile archbrowse-ci-chromium "$chromium_path" flags=(unconfined) {
+            userns,
+          }
+          EOF
+          sudo apparmor_parser -r /etc/apparmor.d/archbrowse-ci-chromium
       - name: Typecheck, unit tests, browser/PTY parity, sessions and agent control
         run: npm run check
       - name: Verify installed package and bundled skill
