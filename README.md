@@ -25,7 +25,7 @@ Install the agent skill directly from this repository:
 npx skills add ArchAstro/archbrowse --skill archbrowse
 ```
 
-Add `--global` for user-wide installation, or `--agent codex` to select Codex explicitly. While the repository is private, your GitHub account needs access.
+Add `--global` for user-wide installation, or `--agent codex` to select Codex explicitly.
 
 The bundled [ArchBrowse skill](skills/archbrowse/SKILL.md) is discoverable at `skills/archbrowse/`. It includes its bootstrap installer, saved-preference helper and usage references. It can install the CLI, collect terminal/layout/session preferences, and teach an agent to launch and control a viewer. The skill is also included in the npm package; `archbrowse --skill` prints its entrypoint.
 
