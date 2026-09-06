@@ -44,7 +44,7 @@
     "yaml": "^2.9.0"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "^26.4.1",
     "@types/pngjs": "^6.0.0",
     "@types/proper-lockfile": "^4.1.4",
     "@types/react": "^19.0.0",
@@ -52,7 +52,7 @@
     "node-pty": "^1.1.0",
     "pngjs": "^7.0.0",
     "tsx": "^4.20.0",
-    "typescript": "^5.9.0"
+    "typescript": "^7.0.2"
   },
   "repository": {
     "type": "git",
