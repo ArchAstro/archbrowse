@@ -1,0 +1,31 @@
+name: Bug report
+description: Report a reproducible problem with ArchBrowse
+body:
+  - type: markdown
+    attributes:
+      value: "For vulnerabilities, follow SECURITY.md. Remove credentials and private page content from reports."
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: ArchBrowse commit/version, Node version, OS, terminal, HerdR version if used, and Chromium version.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Exact command and steps; include a small public fixture when possible.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Reviewed logs or screenshots
+      description: Attach only material safe to share publicly.

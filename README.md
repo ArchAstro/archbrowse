@@ -1,16 +1,21 @@
 # ArchBrowse
 
+[![CI](https://github.com/ArchAstro/archbrowse/actions/workflows/ci.yml/badge.svg)](https://github.com/ArchAstro/archbrowse/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 *A terminal browser you and your agents can control.*
 
 Run React apps, arbitrary HTTP(S) websites, and local HTML files inside a Kitty graphics terminal. Chromium renders the DOM, CSS, SVG, canvas and browser events; the CLI transports pixels and terminal input. Source edits rebuild automatically.
 
 ```fish
-npm install
+git clone https://github.com/ArchAstro/archbrowse.git
+cd archbrowse
+npm ci
 npm run build
 node dist/cli.js examples/App.tsx
 ```
 
-Use **Node 22+** and a terminal implementing Kitty graphics, such as Kitty or Ghostty. Quit with **Ctrl+Q**. No browser was downloaded during development or tests: the CLI reused installed Chromium.
+Use **Node 22+** and a terminal implementing Kitty graphics, such as Kitty or Ghostty. Quit with **Ctrl+Q**. The CLI reuses installed Chromium when available, otherwise downloads Chromium; `--no-install` disables it. Start from source as shown above; an npm release is not assumed.
 
 ## Agent skill and first-use setup
 
@@ -20,7 +25,7 @@ Install the agent skill directly from this repository:
 npx skills add ArchAstro/archbrowse --skill archbrowse
 ```
 
-Add `--global` for user-wide installation, or `--agent codex` to select Codex explicitly. The repository is currently private, so your GitHub account needs access.
+Add `--global` for user-wide installation, or `--agent codex` to select Codex explicitly. While the repository is private, your GitHub account needs access.
 
 The bundled [ArchBrowse skill](skills/archbrowse/SKILL.md) is discoverable at `skills/archbrowse/`. It includes its bootstrap installer, saved-preference helper and usage references. It can install the CLI, collect terminal/layout/session preferences, and teach an agent to launch and control a viewer. The skill is also included in the npm package; `archbrowse --skill` prints its entrypoint.
 
@@ -30,7 +35,7 @@ Bootstrap from a checkout:
 node skills/archbrowse/scripts/bootstrap.mjs install
 ```
 
-The helper reuses a working CLI, otherwise installs a user-local build and links `~/.local/bin/archbrowse`. With a standalone skill copy, it fetches the canonical GitHub repo using `gh` (authenticated access is currently required). It does not assume an npm release exists and does not install Chromium unconditionally.
+The helper reuses a working CLI, otherwise installs a user-local build and links `~/.local/bin/archbrowse`. With a standalone skill copy, it fetches the canonical GitHub repo using Git over HTTPS (private repositories require Git credentials). It does not assume an npm release exists and does not install Chromium unconditionally.
 
 Preferences are saved in `~/.config/archbrowse/preferences.json` (or `$XDG_CONFIG_HOME/archbrowse/preferences.json`), independently of browser profiles and the source repository. `ARCHBROWSE_PREFERENCES_FILE` overrides that path. Global defaults can be overridden per canonical worktree.
 
@@ -270,7 +275,7 @@ Terminal cell/pixel dimensions and pixel mouse support are queried. SGR cell mou
 1. This is a page viewport, not complete browser chrome: downloads, file pickers, browser permission prompts and OS-native popup surfaces aren't integrated. JavaScript dialogs are dismissed so they cannot freeze the terminal. In-page React dialogs work normally; native select controls can be operated with keyboard input.
 2. Pasting from the terminal works. Automatic synchronization with the OS clipboard, IME composition sessions, accessibility text and screen-reader semantics are not transported in the raster image.
 3. Mobile mode emulates one touch point. Pinch/multitouch and physical mobile terminal clients are not verified. Support depends on the events the terminal sends.
-4. Native terminal compositing still needs visual verification on this machine: macOS Screen Recording access is disabled. The PTY suite proves input behavior and lossless PNG transport, not every terminal emulator's compositing implementation.
+4. CI verifies browser input, lossless PNG transport, and real HerdR placement. Native Kitty/Ghostty compositing remains a separate manual visual check; the automated suite does not verify every terminal emulator.
 
 ## 4. Test and inspect
 
@@ -342,3 +347,7 @@ The implementation is original. Research used public descriptions of [terminal-b
 | `src/agent/` | Agent CLI, private IPC, live commands and snapshot refs |
 | `src/session.ts` | Terminal/browser lifecycle, persistence orchestration and frame loop |
 | `src/sessions.ts` | Named profile store, metadata, cookie snapshots and exclusive locks |
+
+## Contributing and license
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development and verification, [SECURITY.md](SECURITY.md) for private vulnerability reports and the local data model, and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for community expectations. ArchBrowse is licensed under [MIT](LICENSE).

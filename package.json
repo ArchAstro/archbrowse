@@ -61,5 +61,20 @@
   "homepage": "https://github.com/ArchAstro/archbrowse#readme",
   "bugs": {
     "url": "https://github.com/ArchAstro/archbrowse/issues"
+  },
+  "license": "MIT",
+  "author": "ArchAstro Inc.",
+  "keywords": [
+    "terminal",
+    "browser",
+    "react",
+    "kitty",
+    "chromium",
+    "agents",
+    "herdr"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   }
 }

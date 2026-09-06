@@ -18,7 +18,7 @@ node "$ARCHBROWSE_SKILL_DIR/scripts/bootstrap.mjs" install --source "$ARCHBROWSE
 The helper:
 
 1. Reuses a verified ArchBrowse CLI from PATH or its managed installation.
-2. Uses an enclosing ArchBrowse checkout when the skill lives in the repo. Otherwise it fetches `ArchAstro/archbrowse` with `gh repo clone`. The repository is currently private: authenticated access is required. Stop at an authentication/access failure and explain it; do not switch to an unrelated npm package.
+2. Uses an enclosing ArchBrowse checkout when the skill lives in the repo. Otherwise it fetches `ArchAstro/archbrowse` with `git clone` over HTTPS. Public access needs no GitHub CLI or login; while the repository is private, Git credentials with repository access are required. Stop at an authentication/access failure and explain it; do not switch to an unrelated npm package.
 3. Builds the source, packs it and installs production dependencies under `~/.local/share/archbrowse/cli` (or `$XDG_DATA_HOME/archbrowse/cli`). It skips dependency lifecycle scripts and does not download Chromium during installation.
 4. Creates `~/.local/bin/archbrowse` on Unix, refusing to overwrite an unrelated file. It returns an absolute `command` vector, so the agent can proceed without editing shell startup files.
 

@@ -50,7 +50,7 @@ export async function install({source,env=process.env,log=message=>process.stder
     checkout=join(locations.install,'source');
     if(!await exists(join(checkout,'package.json'))){
       log(`Fetching ${repository}. Private repositories require authenticated GitHub access.`);
-      await exec('gh',['repo','clone',repository,checkout,'--','--depth=1'],{env,timeout:120000});
+      await exec('git',['clone','--depth=1',`https://github.com/${repository}.git`,checkout],{env,timeout:120000});
     }
   }
   const pkg=JSON.parse(await readFile(join(checkout,'package.json'),'utf8'));

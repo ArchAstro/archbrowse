@@ -12,12 +12,15 @@ const run = (command, args, cwd = directory) => execFileSync(command, args, {
 try {
   const packed = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', directory], process.cwd()))[0];
   const files = new Set(packed.files.map(file => file.path));
-  for (const path of ['dist/cli.js', 'examples/App.tsx', 'skills/archbrowse/SKILL.md',
+  for (const path of ['LICENSE', 'dist/cli.js', 'examples/App.tsx', 'skills/archbrowse/SKILL.md',
     'skills/archbrowse/scripts/bootstrap.mjs', 'skills/archbrowse/scripts/preferences.mjs']) {
     assert.ok(files.has(path), `Missing package file: ${path}`);
   }
   run('npm', ['install', '--prefix', directory, '--omit=dev', '--no-audit', '--no-fund', join(directory, packed.filename)]);
   const root = join(directory, 'node_modules/@archastro/archbrowse');
+  const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
+  assert.equal(manifest.license, 'MIT');
+  assert.equal(manifest.publishConfig.access, 'public');
   for (const name of ['archbrowse', 'starpane', 'react-kitty']) {
     assert.match(run(join(directory, 'node_modules/.bin', name), ['--help']), /^archbrowse —/);
   }
