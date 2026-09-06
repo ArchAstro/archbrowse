@@ -66,6 +66,11 @@ jobs:
       - name: Pin npm with OIDC support
         run: npm install --global npm@11.19.0
       - run: npm ci --no-audit --no-fund
+      - name: Use an unpublished version for dry-run registry checks
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run
+        run: |
+          preview_version="$(node -p 'require("./package.json").version.split("-")[0] + "-dryrun." + process.env.GITHUB_RUN_ID + "." + process.env.GITHUB_RUN_ATTEMPT')"
+          npm version "$preview_version" --no-git-tag-version --ignore-scripts
       - name: Build and pack
         run: |
           npm pack --json > package-result.json

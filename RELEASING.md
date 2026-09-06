@@ -61,7 +61,10 @@ Publishing. See [npm's trust CLI documentation](https://docs.npmjs.com/cli/v11/c
 gh workflow run publish.yml --ref main -f dry_run=true
 ```
 
-This runs the full tests, packs the CLI, and dry-runs publication. A dry run does
+This runs the full tests, packs the CLI, and dry-runs publication. The disposable
+checkout uses a run-specific `-dryrun` prerelease version because npm rejects
+already-published versions even during a dry run. No version change is committed.
+A dry run does
 not prove that npm accepted an OIDC token; the next actual release verifies that
 exchange. Version 0.1.0 has already been published manually and cannot be reused.
 
