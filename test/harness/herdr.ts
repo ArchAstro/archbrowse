@@ -12,7 +12,7 @@ import { waitFor, samePixels } from './terminal.js';
 const exec=promisify(execFile);
 
 /** Outer terminal receiver. The process under test is HerdR itself, not a fake multiplexer. */
-class KittyHost {
+export class KittyHost {
   pty:IPty; output=''; cols=120;rows=45; private pending='';private payload='';private imageId='';
   cellWidth=8;cellHeight=16;pixelMouse=false;private pixelTty?:string;
   private row=0;private col=0;private dimensionQueries:string[]=[];
@@ -71,7 +71,7 @@ class KittyHost {
   click(x:number,y:number){assert.ok(this.placement);const col=this.pixelMouse?Math.round(this.placement.col*this.cellWidth+x)+1:this.placement.col+Math.floor(x/this.cellWidth)+1,row=this.pixelMouse?Math.round(this.placement.row*this.cellHeight+y)+1:this.placement.row+Math.floor(y/this.cellHeight)+1;this.pty.write(`\x1b[<0;${col};${row}M\x1b[<0;${col};${row}m`);}
   async resize(cols:number,rows:number){this.cols=cols;this.rows=rows;if(this.pixelTty)await exec('python3',[resolve('test/harness/pixel-pty.py'),'resize',this.pixelTty,String(cols),String(rows),String(this.cellWidth),String(this.cellHeight)]);else this.pty.resize(cols,rows);}
 }
-async function rpc(socket:string,method:string,params:unknown):Promise<any>{
+export async function rpc(socket:string,method:string,params:unknown):Promise<any>{
   return new Promise((resolve,reject)=>{const client=createConnection(socket,()=>client.write(JSON.stringify({id:'herdr-test',method,params})+'\n'));let data='';client.on('data',chunk=>{data+=chunk;const end=data.indexOf('\n');if(end>=0){client.end();const reply=JSON.parse(data.slice(0,end));if(reply.error)reject(new Error(JSON.stringify(reply.error)));else resolve(reply.result);}});client.on('error',reject);client.setTimeout(5000,()=>{client.destroy();reject(new Error('HerdR API timeout'));});});
 }
 export async function testHerdr(browser:Browser,endpoint:string,artifacts:string,legacy=false,setup?:'accept'|'decline',link:boolean|'live'=false,agent=false){

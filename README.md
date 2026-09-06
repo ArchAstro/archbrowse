@@ -12,6 +12,32 @@ node dist/cli.js examples/App.tsx
 
 Use **Node 22+** and a terminal implementing Kitty graphics, such as Kitty or Ghostty. Quit with **Ctrl+Q**. No browser was downloaded during development or tests: the CLI reused installed Chromium.
 
+## Agent skill and first-use setup
+
+The bundled [Starpane skill](skills/starpane/SKILL.md) can install the CLI, collect terminal/layout/session preferences, and teach an agent to launch and control a viewer. Install the `skills/starpane` folder in your agent's skill directory; it is also included in the npm package. An installed CLI can print the entrypoint with `starpane --skill`.
+
+Bootstrap from a checkout:
+
+```fish
+node skills/starpane/scripts/bootstrap.mjs install
+```
+
+The helper reuses a working CLI, otherwise installs a user-local build and links `~/.local/bin/starpane`. With a standalone skill copy, it fetches the canonical GitHub repo using `gh` (authenticated access is currently required). It does not assume an npm release exists and does not install Chromium unconditionally.
+
+Preferences are saved in `~/.config/starpane/preferences.json` (or `$XDG_CONFIG_HOME/starpane/preferences.json`), independently of browser profiles and the source repository. `STARPANE_PREFERENCES_FILE` overrides that path. Global defaults can be overridden per canonical worktree.
+
+Example preference choices:
+
+```fish
+node skills/starpane/scripts/preferences.mjs set --host herdr --placement split --sessions workspace --focus keep
+node skills/starpane/scripts/preferences.mjs set --workspace /path/to/worktree --placement tab
+node skills/starpane/scripts/preferences.mjs plan --workspace /path/to/worktree
+```
+
+Supported choices cover HerdR splits/tabs, direct terminal placement, workspace/fresh/named/ask session policies, focus, split direction, mobile mode and browser downloads. A tmux preference is retained but reported as unsupported for rendering; agent commands can still run in tmux against a live viewer elsewhere.
+
+`npm run test:skill` exercises saved split and tab preferences against an isolated real HerdR session using the installed CLI. Run the bootstrap installer first. Unit tests cover preference persistence, overrides and session isolation.
+
 ## Upgrading from React Kitty
 
 The package and primary command are now `starpane`. The installed `react-kitty` command remains an alias to the same CLI.

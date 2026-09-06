@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { runAgent } from './agent/cli.js';
 import { agentCommands, AgentError } from './agent/protocol.js';
+import { readFile } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
 import { runSession } from './session.js';
 import { listSessions, deleteSession } from './sessions.js';
@@ -48,6 +49,7 @@ const help = `starpane — React and websites in your terminal
   --cell-width N      Fallback cell pixels if terminal omits geometry (8)
   --cell-height N     Fallback cell pixels if terminal omits geometry (16)
   --force             Bypass terminal graphics capability check
+  --skill             Print the bundled agent skill
   --help              Show this help
 
 Requires Node 22+ and a Kitty graphics terminal. Quit: Ctrl+Q.
@@ -58,11 +60,12 @@ Local HTML and React edits reload automatically.
 let jsonOutput=false;
 try {
   const { values, positionals } = parseArgs({ allowPositionals:true, options: {
-    help:{type:'boolean',short:'h'}, interactive:{type:'boolean',short:'i'}, full:{type:'boolean'}, timeout:{type:'string'}, text:{type:'string'}, url:{type:'string'}, session:{type:'string'}, json:{type:'boolean'}, root:{type:'string'}, chromium:{type:'string'}, cdp:{type:'string'}, 'no-install':{type:'boolean'}, 'install-browser':{type:'boolean'}, fps:{type:'string',default:'15'}, mobile:{type:'boolean'}, width:{type:'string',default:'390'}, height:{type:'string',default:'844'}, 'cell-width':{type:'string',default:'8'}, 'cell-height':{type:'string',default:'16'}, force:{type:'boolean'},
+    help:{type:'boolean',short:'h'}, skill:{type:'boolean'}, interactive:{type:'boolean',short:'i'}, full:{type:'boolean'}, timeout:{type:'string'}, text:{type:'string'}, url:{type:'string'}, session:{type:'string'}, json:{type:'boolean'}, root:{type:'string'}, chromium:{type:'string'}, cdp:{type:'string'}, 'no-install':{type:'boolean'}, 'install-browser':{type:'boolean'}, fps:{type:'string',default:'15'}, mobile:{type:'boolean'}, width:{type:'string',default:'390'}, height:{type:'string',default:'844'}, 'cell-width':{type:'string',default:'8'}, 'cell-height':{type:'string',default:'16'}, force:{type:'boolean'},
   } });
   jsonOutput=!!values.json;
   function number(value: string, name: string, max = 10000) { const n = Number(value); if (!Number.isInteger(n) || n < 1 || n > max) throw new Error(`${name} must be an integer between 1 and ${max}`); return n; }
   if (values.help) process.stdout.write(help);
+  else if(values.skill)process.stdout.write(await readFile(new URL('../skills/starpane/SKILL.md',import.meta.url),'utf8'));
   else if(positionals[0]==='attach') {
     const name=values.session??positionals[1];
     if(!name||positionals.length!==(values.session?1:2))throw new Error('Use attach NAME or --session NAME attach.');

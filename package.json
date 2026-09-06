@@ -10,7 +10,8 @@
   "files": [
     "dist",
     "examples",
-    "README.md"
+    "README.md",
+    "skills"
   ],
   "engines": {
     "node": ">=22"
@@ -28,7 +29,8 @@
     "test:sessions": "npm run build && node scripts/prepare-pty.mjs && tsx test/harness/persistence.ts",
     "pretest:herdr": "npm run build && node scripts/prepare-pty.mjs",
     "test:herdr": "tsx test/harness/herdr-run.ts",
-    "test:agent": "npm run build && node scripts/prepare-pty.mjs && tsx test/harness/agent.ts"
+    "test:agent": "npm run build && node scripts/prepare-pty.mjs && tsx test/harness/agent.ts",
+    "test:skill": "node scripts/prepare-pty.mjs && tsx test/harness/skill.ts"
   },
   "dependencies": {
     "esbuild": "^0.25.0",
