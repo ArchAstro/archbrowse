@@ -43,6 +43,13 @@ try {
     await waitFor(async()=>{try{await archbrowse(['--session',plan.session,'attach']);return false;}catch{return true;}},'viewer closed');
     await exec('herdr',tab?['tab','close',tab]:['pane','close',pane],{env:context});
   }
+  await savePreferences({mode:'headless',sessionPolicy:'workspace'},{env:context});
+  // Use the saved file but no HerdR context: headless mode must not need a pane.
+  const background=await planLaunch(process.cwd(),{},env);assert.equal(background.status,'ready');assert.ok(background.launchFlags.includes('--headless'));
+  await exec(command[0],[...command.slice(1),resolve('examples/html/index.html'),'--session',background.session,...background.launchFlags,'--no-install'],{env});
+  try{assert.equal((await archbrowse(['--session',background.session,'attach'])).result.mode,'background');}
+  finally{await exec(command[0],[...command.slice(1),'sessions','stop',background.session],{env});}
+  report+='1. Saved headless preference launches the installed CLI without a HerdR pane and stops cleanly.\n';
   report+='\nPASS\n';console.log(`PASS: ${artifacts}`);
 }catch(error){report+=`\nFAIL: ${String(error)}\n`;throw error;}
 finally{

@@ -28,6 +28,7 @@ separate maintenance commitment.
   other processes running as your user can drive the session. Session names are
   identifiers, not authentication secrets. Windows named-pipe behavior has not
   been covered by the current Linux/macOS CI matrix.
+- Background owners remain running after their launching CLI or attached viewer exits. Use `sessions stop NAME` to close them. Their viewer socket has the same Unix owner-only access boundary as agent control; a viewer can read pixels and send input.
 - Screenshots, terminal transcripts, page snapshots, and test artifacts may
   contain sensitive content. Review them before sharing. The standard CI tests
   use local fixtures; external-site smoke tests are opt-in.

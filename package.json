@@ -23,7 +23,7 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test test/*.test.ts",
     "test:e2e": "tsx test/harness/run.ts",
-    "check": "npm run typecheck && npm test && npm run test:e2e && npm run test:sessions && npm run test:agent",
+    "check": "npm run typecheck && npm test && npm run test:e2e && npm run test:sessions && npm run test:agent && npm run test:headless",
     "prepack": "npm run build",
     "pretest:e2e": "npm run build && node scripts/prepare-pty.mjs",
     "test:native": "npm run build && tsx test/harness/native.ts",
@@ -32,7 +32,8 @@
     "test:herdr": "tsx test/harness/herdr-run.ts",
     "test:agent": "npm run build && node scripts/prepare-pty.mjs && tsx test/harness/agent.ts",
     "test:skill": "node scripts/prepare-pty.mjs && tsx test/harness/skill.ts",
-    "test:package": "node scripts/check-package.mjs"
+    "test:package": "node scripts/check-package.mjs",
+    "test:headless": "npm run build && node scripts/prepare-pty.mjs && tsx test/harness/headless.ts"
   },
   "dependencies": {
     "esbuild": "^0.25.0",

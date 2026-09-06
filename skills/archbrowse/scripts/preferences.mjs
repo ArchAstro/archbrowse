@@ -8,8 +8,8 @@ import { createHash, randomBytes } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
 
-const choices={host:['herdr','terminal','tmux'],placement:['split','tab','current'],sessionPolicy:['workspace','fresh','named','ask'],focus:['keep','viewer'],splitDirection:['auto','right','down'],browserDownload:['if-missing','never'],terminalProgram:['manual','kitty','ghostty','wezterm']};
-const optionalDefaults={focus:'keep',splitDirection:'auto',browserDownload:'if-missing',mobile:false,terminalProgram:'manual'};
+const choices={mode:['terminal','headless'],host:['herdr','terminal','tmux'],placement:['split','tab','current'],sessionPolicy:['workspace','fresh','named','ask'],focus:['keep','viewer'],splitDirection:['auto','right','down'],browserDownload:['if-missing','never'],terminalProgram:['manual','kitty','ghostty','wezterm']};
+const optionalDefaults={mode:'terminal',focus:'keep',splitDirection:'auto',browserDownload:'if-missing',mobile:false,terminalProgram:'manual'};
 export function preferencesPath(env=process.env){
   const override=env.ARCHBROWSE_PREFERENCES_FILE??env.STARPANE_PREFERENCES_FILE;if(override)return resolve(override);
   const base=env.XDG_CONFIG_HOME??join(homedir(),'.config');
@@ -28,7 +28,7 @@ function validate(settings,partial=false){
     else if(key==='sessionName'){if(typeof value!=='string'||! /^[a-z0-9][a-z0-9_-]{0,63}$/.test(value))throw new Error('Invalid named ArchBrowse session.');}
     else throw new Error(`Unknown preference: ${key}`);
   }
-  if(!partial){for(const key of ['host','placement','sessionPolicy'])if(!settings[key])throw new Error(`Missing preference: ${key}`);if(settings.sessionPolicy==='named'&&!settings.sessionName)throw new Error('Named policy requires sessionName.');}
+  if(!partial){for(const key of settings.mode==='headless'?['sessionPolicy']:['host','placement','sessionPolicy'])if(!settings[key])throw new Error(`Missing preference: ${key}`);if(settings.sessionPolicy==='named'&&!settings.sessionName)throw new Error('Named policy requires sessionName.');}
 }
 export async function readPreferences(env=process.env){
   let text;try{text=await readFile(preferencesPath(env),'utf8');}catch(error){if(error.code==='ENOENT')return {version:1,workspaces:{}};throw error;}
@@ -63,20 +63,21 @@ export async function savePreferences(patch,{workspace,env=process.env}={}){
 export async function planLaunch(workspace,overrides={},env=process.env){
   const saved=await showPreferences(workspace,env),settings={...saved.effective,...overrides};
   try{validate(settings);}catch(error){return {...saved,status:'needs-setup',reason:error.message};}
-  if(settings.host==='tmux')return {...saved,settings,status:'unsupported-host',reason:'ArchBrowse does not render inside tmux yet. Keep this preference, but use a compatible viewer outside tmux or attach to an existing live session; do not use --force.'};
-  if(settings.host==='herdr' && !(env.HERDR_ENV==='1'&&env.HERDR_SOCKET_PATH&&env.HERDR_WORKSPACE_ID&&env.HERDR_PANE_ID))return {...saved,settings,status:'host-unavailable',reason:'Launch from a HerdR-managed pane or choose an available terminal. Do not control a focused HerdR session from outside it.'};
+  if(settings.mode!=='headless'&&settings.host==='tmux')return {...saved,settings,status:'unsupported-host',reason:'ArchBrowse does not render inside tmux yet. Keep this preference, but use a compatible viewer outside tmux or attach to an existing live session; do not use --force.'};
+  if(settings.mode!=='headless'&&settings.host==='herdr' && !(env.HERDR_ENV==='1'&&env.HERDR_SOCKET_PATH&&env.HERDR_WORKSPACE_ID&&env.HERDR_PANE_ID))return {...saved,settings,status:'host-unavailable',reason:'Launch from a HerdR-managed pane or choose an available terminal. Do not control a focused HerdR session from outside it.'};
   if(settings.sessionPolicy==='ask')return {...saved,settings,status:'needs-session-choice'};
-  const identity=settings.host==='herdr'?`${resolve(env.HERDR_SOCKET_PATH)}#${env.HERDR_WORKSPACE_ID}`:saved.workspace;
-  const label=(settings.host==='herdr'?env.HERDR_WORKSPACE_ID:basename(saved.workspace)).toLowerCase().replace(/[^a-z0-9_-]+/g,'-').slice(0,28)||'workspace';
+  const useHerdr=settings.mode!=='headless'&&settings.host==='herdr';
+  const identity=useHerdr?`${resolve(env.HERDR_SOCKET_PATH)}#${env.HERDR_WORKSPACE_ID}`:saved.workspace;
+  const label=(useHerdr?env.HERDR_WORKSPACE_ID:basename(saved.workspace)).toLowerCase().replace(/[^a-z0-9_-]+/g,'-').slice(0,28)||'workspace';
   const suffix=settings.sessionPolicy==='fresh'?Date.now().toString(36)+'-'+randomBytes(3).toString('hex'):createHash('sha256').update(identity).digest('hex').slice(0,10);
   // Session IDs stay stable across product renames so existing viewers are reused.
   const session=settings.sessionPolicy==='named'?settings.sessionName:`sp-${label}-${suffix}`;
-  return {path:saved.path,workspace:saved.workspace,settings,status:'ready',session,reuse:settings.sessionPolicy!=='fresh',viewerFlags:[...(settings.browserDownload==='never'?['--no-install']:[]),...(settings.mobile?['--mobile']:[])]};
+  return {path:saved.path,workspace:saved.workspace,settings,status:'ready',session,reuse:settings.sessionPolicy!=='fresh',launchFlags:[...(settings.mode==='headless'?['--headless']:[]),...(settings.browserDownload==='never'?['--no-install']:[]),...(settings.mobile?['--mobile']:[])],viewerFlags:[...(settings.browserDownload==='never'?['--no-install']:[]),...(settings.mobile?['--mobile']:[])]};
 }
 async function main(){
-  const {values,positionals}=parseArgs({allowPositionals:true,options:{workspace:{type:'string'},file:{type:'string'},host:{type:'string'},placement:{type:'string'},sessions:{type:'string'},name:{type:'string'},focus:{type:'string'},direction:{type:'string'},'browser-download':{type:'string'},'terminal-program':{type:'string'},mobile:{type:'boolean'},desktop:{type:'boolean'}}});
+  const {values,positionals}=parseArgs({allowPositionals:true,options:{mode:{type:'string'},workspace:{type:'string'},file:{type:'string'},host:{type:'string'},placement:{type:'string'},sessions:{type:'string'},name:{type:'string'},focus:{type:'string'},direction:{type:'string'},'browser-download':{type:'string'},'terminal-program':{type:'string'},mobile:{type:'boolean'},desktop:{type:'boolean'}}});
   const action=positionals[0]??'show';if(positionals.length>1)throw new Error('Expected show, set or plan.');
-  const patch={};for(const [flag,key] of Object.entries({host:'host',placement:'placement',sessions:'sessionPolicy',name:'sessionName',focus:'focus',direction:'splitDirection','browser-download':'browserDownload','terminal-program':'terminalProgram'}))if(values[flag]!==undefined)patch[key]=values[flag];
+  const patch={};for(const [flag,key] of Object.entries({mode:'mode',host:'host',placement:'placement',sessions:'sessionPolicy',name:'sessionName',focus:'focus',direction:'splitDirection','browser-download':'browserDownload','terminal-program':'terminalProgram'}))if(values[flag]!==undefined)patch[key]=values[flag];
   if(values.mobile&&values.desktop)throw new Error('Choose --mobile or --desktop.');if(values.mobile)patch.mobile=true;if(values.desktop)patch.mobile=false;
   let result;
   if(action==='show')result=await showPreferences(values.workspace);
@@ -85,4 +86,4 @@ async function main(){
   else throw new Error('Use show, set or plan.');
   process.stdout.write(JSON.stringify(result,null,2)+'\n');
 }
-if(process.argv[1]&&realpathSync(process.argv[1])===fileURLToPath(import.meta.url))main().catch(error=>{process.stderr.write(`archbrowse preferences: ${error.message}\n`);process.exitCode=1;});
+if(process.argv[1]&&existsSync(process.argv[1])&&realpathSync(process.argv[1])===fileURLToPath(import.meta.url))main().catch(error=>{process.stderr.write(`archbrowse preferences: ${error.message}\n`);process.exitCode=1;});

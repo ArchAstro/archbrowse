@@ -4,6 +4,7 @@ import { point, type Geometry } from './kitty.js';
 export class Interaction {
   private activeModifiers = new Set<string>();
   private touch = false;
+  private heldButtons=new Set<'left'|'middle'|'right'>();
   private heldKeys = new Set<string>();
   private lastClick = { x: -100, y: -100, at: 0, count: 0 };
   constructor(private page: Page, private cdp: CDPSession, private geometry: () => Geometry, private pixel: () => boolean, private mobile = false) {}
@@ -13,7 +14,7 @@ export class Interaction {
   }
   async dispatch(input: Input) {
     if (input.type === 'paste') { await this.page.keyboard.insertText(input.text); return; }
-    if (input.type === 'focus') { if (!input.focused) { for (const key of this.heldKeys) await this.page.keyboard.up(key); this.heldKeys.clear(); await this.mods([]); if (this.touch) { await this.cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] }); this.touch = false; } } return; }
+    if (input.type === 'focus') { if (!input.focused) { for (const key of this.heldKeys) await this.page.keyboard.up(key); this.heldKeys.clear(); if(this.heldButtons.size)await this.page.mouse.move(-1,-1);for(const button of this.heldButtons)await this.page.mouse.up({button});this.heldButtons.clear(); await this.mods([]); if (this.touch) { await this.cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] }); this.touch = false; } } return; }
     if (input.type === 'key') {
       await this.mods(input.modifiers);
       const shifted: Record<string,string> = Object.fromEntries([..."`1234567890-=[]\\;',./"].map((c,i)=>[c,[..."~!@#$%^&*()_+{}|:\"<>?"][i]]));
@@ -52,12 +53,12 @@ export class Interaction {
     await this.page.mouse.move(x, y);
     if (code & 32) return;
     if (!button) return;
-    if (input.release) await this.page.mouse.up({ button, clickCount: this.lastClick.count || 1 });
+    if (input.release) {await this.page.mouse.up({ button, clickCount: this.lastClick.count || 1 });this.heldButtons.delete(button);}
     else {
       const now = Date.now(), last = this.lastClick;
       const count = now - last.at < 500 && Math.hypot(x - last.x, y - last.y) < 4 ? last.count % 3 + 1 : 1;
       this.lastClick = { x, y, at:now, count };
-      await this.page.mouse.down({ button, clickCount:count });
+      await this.page.mouse.down({ button, clickCount:count });this.heldButtons.add(button);
     }
   }
 }

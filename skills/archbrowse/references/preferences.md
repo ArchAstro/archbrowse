@@ -63,3 +63,18 @@ node "$ARCHBROWSE_SKILL_DIR/scripts/preferences.mjs" plan --workspace "$ARCHBROW
 - `ask` returns `needs-session-choice`. Collect the choice and rerun with `--sessions workspace`, `--sessions fresh`, or `--sessions named --name NAME`.
 
 The helper saves tmux preferences but returns `unsupported-host` for a tmux viewer. Choosing a supported host with a one-off plan does not erase the user's preference.
+
+## Headless preference
+
+```sh
+node "$ARCHBROWSE_SKILL_DIR/scripts/preferences.mjs" set --mode headless --sessions workspace
+node "$ARCHBROWSE_SKILL_DIR/scripts/preferences.mjs" plan --workspace "$ARCHBROWSE_WORKSPACE"
+```
+
+Headless mode requires only a session policy, not a terminal host or placement.
+It plans successfully without HerdR context or from tmux. `launchFlags` includes
+`--headless`; `viewerFlags` does not. Existing preferences default to `terminal`
+mode. Switching back to terminal mode requires host and placement choices.
+Workspace-based headless names derive from the canonical workspace path. When
+attaching visually later, preserve the already-running name even if the selected
+terminal layout would otherwise plan a different name.

@@ -8,7 +8,7 @@ export class AgentController {
   private refs=new SnapshotRefs();
   private generation=-1;
   private tabs=new WeakMap<Page,string>();private nextTab=0;
-  constructor(private name:string,private view:PageView){}
+  constructor(private name:string,private view:PageView,private lifecycle?:{stop:()=>void;describe:()=>Record<string,unknown>}){}
   private tabId(page:Page){let id=this.tabs.get(page);if(!id){id=`t${++this.nextTab}`;this.tabs.set(page,id);}return id;}
   async execute(r:AgentRequest):Promise<unknown> {
     if(this.generation!==this.view.generation){this.refs.clear();this.generation=this.view.generation;}
@@ -18,7 +18,8 @@ export class AgentController {
     const target=async(index=0)=>{if(!args[index])throw new AgentError('invalid_arguments','Provide a snapshot ref or selector.');return this.refs.target(page,args[index]);};
     const done=()=>({url:this.view.page.url()});
     switch(r.command){
-      case 'attach':arity(0);return {session:this.name,url:page.url(),title:await page.title(),tab:this.tabId(page)};
+      case 'attach':arity(0);return {session:this.name,url:page.url(),title:await page.title(),tab:this.tabId(page),...this.lifecycle?.describe()};
+      case 'stop':arity(0);if(!this.lifecycle)throw new AgentError('unsupported_command','This session cannot be stopped remotely.');this.lifecycle.stop();return {session:this.name,stopping:true};
       case 'snapshot':arity(0);return this.refs.snapshot(page,r.interactive);
       case 'read':arity(0);return page.locator('body').innerText({timeout});
       case 'click':case 'dblclick':case 'hover':case 'focus':case 'check':case 'uncheck':{

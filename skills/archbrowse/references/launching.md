@@ -32,6 +32,8 @@ Replace `--no-focus` with `--focus` only when requested/saved. Parse the returne
 
 ```text
 archbrowse /absolute/path/App.tsx --session NAME [viewerFlags]
+# For an already-running background owner, instead launch:
+archbrowse attach NAME --view
 ```
 
 Use the bootstrap result's absolute command when PATH is not ready. Every executable/argument must be quoted for the pane's shell; never interpolate an unquoted user URL, file path or name. Herdr's pane command takes one complete command argument; prefer a tool API/argv array for invoking the `herdr` CLI itself.
@@ -49,5 +51,7 @@ ArchBrowse needs a real Kitty-graphics terminal, such as Kitty, Ghostty or WezTe
 For a new tab/split in a named emulator, inspect its installed CLI/help and use its supported tab/split mechanism. Honor `terminalProgram`, placement and focus. Do not substitute a new native window for a requested tab, launch another emulator, or open GUI permission prompts as a fallback. If that environment cannot create the chosen layout, explain the concrete limitation and offer a supported placement for this task.
 
 ## tmux
+
+Headless startup and agent commands work from tmux without graphics. A visual `attach NAME --view` must run outside tmux in a supported terminal.
 
 ArchBrowse's tmux graphics transport is not implemented. Do not launch `tmux split-window archbrowse ...` or use `--force` and claim it works. Keep the requested preference in the file; ask to use a supported viewer outside tmux, or attach to an already running named viewer. The agent-control commands work from a tmux shell because they use a private socket rather than rendering pixels there.

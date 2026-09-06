@@ -12,7 +12,7 @@ const run = (command, args, cwd = directory) => execFileSync(command, args, {
 try {
   const packed = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', directory], process.cwd()))[0];
   const files = new Set(packed.files.map(file => file.path));
-  for (const path of ['LICENSE', 'dist/cli.js', 'examples/App.tsx', 'skills/archbrowse/SKILL.md',
+  for (const path of ['LICENSE', 'dist/cli.js', 'dist/daemon.js', 'dist/viewer-server.js', 'skills/archbrowse/references/background.md', 'examples/App.tsx', 'skills/archbrowse/SKILL.md',
     'skills/archbrowse/scripts/bootstrap.mjs', 'skills/archbrowse/scripts/preferences.mjs']) {
     assert.ok(files.has(path), `Missing package file: ${path}`);
   }

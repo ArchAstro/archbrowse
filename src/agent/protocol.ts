@@ -15,7 +15,7 @@ export function agentSocket(name:string) {
   if(Buffer.byteLength(socket)>100)throw new AgentError('socket_path_too_long','Runtime socket path is too long. Use a shorter TMPDIR.');
   return socket;
 }
-export const agentCommands=new Set(['attach','snapshot','read','click','dblclick','hover','focus','fill','type','press','check','uncheck','select','scroll','get','wait','screenshot','open','back','forward','reload','tab','eval']);
+export const agentCommands=new Set(['stop','attach','snapshot','read','click','dblclick','hover','focus','fill','type','press','check','uncheck','select','scroll','get','wait','screenshot','open','back','forward','reload','tab','eval']);
 export function validateRequest(value:unknown):AgentRequest {
   if(!value||typeof value!=='object')throw new AgentError('invalid_request','Expected a command request.');
   const r=value as AgentRequest;

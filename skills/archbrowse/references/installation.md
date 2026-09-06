@@ -24,7 +24,7 @@ The helper:
 
 Use the returned `command` array as executable plus arguments. Do not join user input into an unescaped shell command. If needed, show the user how to add the returned bin directory to PATH with **their** shell (Fish: `fish_add_path /actual/bin/directory`). Do not repeatedly reinstall because a shell has not refreshed PATH.
 
-Test/install overrides: `ARCHBROWSE_INSTALL_DIR` and `ARCHBROWSE_BIN_DIR`. An existing working CLI is left alone; this helper is bootstrap, not an automatic updater.
+Test/install overrides: `ARCHBROWSE_INSTALL_DIR` and `ARCHBROWSE_BIN_DIR`. An existing working CLI is left alone by default. If its `--help` lacks `--headless` or `--view`, run `bootstrap.mjs install --upgrade` and use the returned command. Upgrade rebuilds the enclosing checkout or fast-forwards the managed Git source; it preserves profiles/preferences and refuses unrelated launcher files. An explicit `--source` uses that checkout without pulling it. The managed CLI takes precedence in later status checks.
 
 ## Browser setup
 

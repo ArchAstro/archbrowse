@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { access, mkdir, mkdtemp, readFile, rm, realpath, symlink, lstat, writeFile, copyFile } from 'node:fs/promises';
-import { realpathSync } from 'node:fs';
+import { realpathSync, existsSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, delimiter, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,7 +13,7 @@ async function exists(path){try{await access(path);return true;}catch{return fal
 async function verify(command){try{const {stdout}=await exec(command[0],[...command.slice(1),'--help'],{timeout:15000});return stdout.startsWith('archbrowse —')&&stdout.includes('snapshot');}catch{return false;}}
 export async function status(env=process.env){
   const {install,bin}=paths(env);
-  const candidates=[...(env.PATH??'').split(delimiter).filter(Boolean).map(dir=>join(dir,process.platform==='win32'?'archbrowse.cmd':'archbrowse')),join(bin,'archbrowse'),join(install,'node_modules','@archastro','archbrowse','dist','cli.js')];
+  const candidates=[join(install,'node_modules','@archastro','archbrowse','dist','cli.js'),...(env.PATH??'').split(delimiter).filter(Boolean).map(dir=>join(dir,process.platform==='win32'?'archbrowse.cmd':'archbrowse')),join(bin,'archbrowse'),join(install,'node_modules','@archastro','archbrowse','dist','cli.js')];
   for(const candidate of [...new Set(candidates)])if(await exists(candidate)){
     let command=candidate.endsWith('.js')?[process.execPath,candidate]:[candidate];
     if(process.platform==='win32'&&candidate.endsWith('.cmd')){
@@ -41,16 +41,20 @@ async function localSource(){
     path=dirname(path);
   }
 }
-export async function install({source,env=process.env,log=message=>process.stderr.write(message+'\n')}={}){
+export async function install({source,upgrade=false,env=process.env,log=message=>process.stderr.write(message+'\n')}={}){
   if(Number(process.versions.node.split('.')[0])<22)throw new Error('ArchBrowse requires Node.js 22+. Install/select Node 22+ with your normal version manager first.');
-  const current=await status(env);if(current.installed)return {...current,changed:false};
+  const current=await status(env);if(current.installed&&!upgrade)return {...current,changed:false};
   const locations=paths(env);await mkdir(locations.install,{recursive:true});
   let checkout=source?await realpath(resolve(source)):await localSource();
+  if(upgrade&&!source&&checkout&&!await exists(join(checkout,'tsconfig.json')))checkout=undefined;
   if(!checkout){
     checkout=join(locations.install,'source');
     if(!await exists(join(checkout,'package.json'))){
       log(`Fetching ${repository}. Private repositories require authenticated GitHub access.`);
       await exec('git',['clone','--depth=1',`https://github.com/${repository}.git`,checkout],{env,timeout:120000});
+    }else if(upgrade){
+      await exec('git',['-C',checkout,'diff','--quiet'],{env});
+      await exec('git',['-C',checkout,'pull','--ff-only'],{env,timeout:120000});
     }
   }
   const pkg=JSON.parse(await readFile(join(checkout,'package.json'),'utf8'));
@@ -73,17 +77,18 @@ export async function install({source,env=process.env,log=message=>process.stder
   if(!await verify(command))throw new Error('Installed CLI failed the ArchBrowse identity/help check.');
   await mkdir(locations.bin,{recursive:true});const shim=join(locations.bin,process.platform==='win32'?'archbrowse.cmd':'archbrowse');
   const prior=await lstat(shim).catch(error=>{if(error.code==='ENOENT')return null;throw error;});
+  if(prior && await realpath(shim).catch(()=>null)===await realpath(entry))return {installed:true,changed:true,command,launcher:shim,installDirectory:locations.install,binDirectory:locations.bin,source:checkout};
   if(prior)throw new Error(`CLI installed at ${entry}, but ${shim} already exists. Use the returned installation directly or resolve that path conflict; it was not overwritten.`);
   if(process.platform==='win32')await writeFile(shim,`@echo off\r\n"${process.execPath}" "${entry}" %*\r\n`);
   else await symlink(join(locations.install,'node_modules','.bin','archbrowse'),shim);
   return {installed:true,changed:true,command,launcher:shim,installDirectory:locations.install,binDirectory:locations.bin,pathContainsLauncher:(env.PATH??'').split(delimiter).includes(locations.bin),source:checkout};
 }
 async function main(){
-  const {values,positionals}=parseArgs({allowPositionals:true,options:{source:{type:'string'}}});
+  const {values,positionals}=parseArgs({allowPositionals:true,options:{source:{type:'string'},upgrade:{type:'boolean'}}});
   if(positionals.length>1)throw new Error('Use status or install [--source PATH].');
   const action=positionals[0]??'status';
-  const result=action==='status'?await status():action==='install'?await install({source:values.source}):null;
+  const result=action==='status'?await status():action==='install'?await install({source:values.source,upgrade:values.upgrade}):null;
   if(!result)throw new Error('Use status or install [--source PATH].');
   process.stdout.write(JSON.stringify(result,null,2)+'\n');
 }
-if(process.argv[1]&&realpathSync(process.argv[1])===fileURLToPath(import.meta.url))main().catch(error=>{process.stderr.write(`archbrowse bootstrap: ${error.message}${error.stderr?'\n'+error.stderr:''}\n`);process.exitCode=1;});
+if(process.argv[1]&&existsSync(process.argv[1])&&realpathSync(process.argv[1])===fileURLToPath(import.meta.url))main().catch(error=>{process.stderr.write(`archbrowse bootstrap: ${error.message}${error.stderr?'\n'+error.stderr:''}\n`);process.exitCode=1;});

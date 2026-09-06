@@ -43,3 +43,17 @@ test('skill reuses Starpane preferences and honors both environment names',async
     const settings=await showPreferences(project,env);assert.equal(settings.effective.placement,'tab');assert.equal(settings.effective.focus,'viewer');
   }finally{await rm(root,{recursive:true,force:true});}
 });
+
+test('headless preferences plan without a terminal host and preserve explicit session choices',async()=>{
+  const dir=await mkdtemp(join(tmpdir(),'archbrowse-headless-preferences-'));
+  try {
+    const env={ARCHBROWSE_PREFERENCES_FILE:join(dir,'preferences.json')};
+    await savePreferences({mode:'headless',sessionPolicy:'workspace'},{env});
+    const first=await planLaunch(dir,{},env),again=await planLaunch(dir,{},env);
+    assert.equal(first.status,'ready');assert.equal(first.session,again.session);assert.ok(first.launchFlags.includes('--headless'));
+    assert.equal((await planLaunch(dir,{host:'tmux'},env)).status,'ready');
+    assert.equal((await planLaunch(dir,{mode:'terminal'},env)).status,'needs-setup');
+    await savePreferences({sessionPolicy:'named',sessionName:'research'},{env});
+    assert.equal((await planLaunch(dir,{},env)).session,'research');
+  }finally{await rm(dir,{recursive:true,force:true});}
+});

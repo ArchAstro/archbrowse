@@ -1,3 +1,4 @@
+import { serveViewer } from './viewer-server.js';
 import { serveAgent } from './agent/ipc.js';
 import { AgentController } from './agent/controller.js';
 import { offerHerdrSetup } from './herdr-setup.js';
@@ -15,16 +16,17 @@ import { InputParser, type Input } from './input.js';
 import { encodeFrame, enterTerminal, leaveTerminal, geometryQuery, graphicsQuery, viewport, displayGeometry, type Geometry } from './kitty.js';
 import { PageView } from './page-view.js';
 
-export interface SessionOptions { target?: string; name?:string; chromium?: string; cdp?: string; install?: boolean; fps: number; mobile?: { width:number; height:number }; cellWidth:number; cellHeight:number; force?:boolean; root?:string }
-export async function runSession(options: SessionOptions) {
+export interface SessionOptions { target?: string; name?:string; chromium?: string; cdp?: string; install?: boolean; fps: number; mobile?: { width:number; height:number }; cellWidth:number; cellHeight:number; force?:boolean; root?:string; headless?:boolean; headlessViewport?:{width:number;height:number} }
+export async function runSession(options: SessionOptions,onReady?:(info:unknown)=>void) {
   const stdin = process.stdin, stdout = process.stdout;
-  if (!stdin.isTTY || !stdout.isTTY) throw new Error('Interactive mode needs a TTY and a Kitty graphics terminal.');
-  if (process.env.TMUX && !options.force) throw new Error('Run directly in a Kitty graphics terminal (tmux passthrough is not supported).');
+  if (!options.headless && (!stdin.isTTY || !stdout.isTTY)) throw new Error('Interactive mode needs a TTY and a Kitty graphics terminal.');
+  if (!options.headless && process.env.TMUX && !options.force) throw new Error('Run directly in a Kitty graphics terminal (tmux passthrough is not supported).');
   let browser: Browser | undefined, server: Awaited<ReturnType<typeof openTarget>> | undefined;
   let named: Awaited<ReturnType<typeof acquireSession>> | undefined;
   let saved: SessionRecord | undefined;
   let agentServer:Awaited<ReturnType<typeof serveAgent>>|undefined;
   let agent:AgentController|undefined;
+  let viewerServer:Awaited<ReturnType<typeof serveViewer>>|undefined;
   let ready = false;
   let ownContext: BrowserContext | undefined;
   let entered = false, stopped = false, pixel = false, graphics: boolean | undefined;
@@ -33,6 +35,11 @@ export async function runSession(options: SessionOptions) {
   let view: PageView | undefined;
   let herdr: HerdrGraphics | undefined;
   let geometry: Geometry = { columns:stdout.columns || 80, rows:stdout.rows || 24, cellWidth:options.cellWidth, cellHeight:options.cellHeight };
+  if(options.headless){
+    if(!options.name)throw new Error('--headless requires --session NAME.');
+    const size=options.headlessViewport??{width:1280,height:720};
+    geometry={columns:size.width,rows:size.height,cellWidth:1,cellHeight:1};
+  }
   let resizeRevision = 0;
   const outputAbort = new AbortController();
   const stop = () => { stopped = true; outputAbort.abort(); };
@@ -64,9 +71,9 @@ export async function runSession(options: SessionOptions) {
   try {
     // HerdR can finish laying out its pane while browser startup/navigation is
     // awaiting I/O. Retain those resize events before the first frame is sent.
-    stdout.on('resize', onResize);
+    if(!options.headless)stdout.on('resize', onResize);
     const openHerdr=()=>HerdrGraphics.open(error=>{failure=error;stop();},process.env,{signal:outputAbort.signal,onWaiting:()=>process.stderr.write('Waiting for HerdR to discover host pixel dimensions…\n')});
-    try { herdr=await openHerdr(); }
+    try { if(!options.headless)herdr=await openHerdr(); }
     catch(error) {
       await offerHerdrSetup(error,{signal:outputAbort.signal});
       try {herdr=await openHerdr();}catch(retryError){
@@ -107,14 +114,23 @@ export async function runSession(options: SessionOptions) {
       await named.save(saved);
     }
     ready=true;
-    stdin.setRawMode(true); stdin.resume(); stdin.on('data', onData);
-    entered = true; await write(enterTerminal + (herdr ? (pixel ? '\x1b[?1016h' : '') : graphicsQuery + geometryQuery));
-    // Query responses share stdin with user events. A bounded probe avoids hanging old terminals.
-    for (let n = 0; n < 20 && !herdr && graphics === undefined && !stopped; n++) await delay(25);
-    if (!herdr && graphics !== true && !options.force) throw new Error('Terminal did not confirm Kitty graphics support. Use Kitty/Ghostty, or --force for a compatible terminal that omits query responses.');
+    if(!options.headless) {
+      stdin.setRawMode(true); stdin.resume(); stdin.on('data', onData);
+      entered = true; await write(enterTerminal + (herdr ? (pixel ? '\x1b[?1016h' : '') : graphicsQuery + geometryQuery));
+      for (let n = 0; n < 20 && !herdr && graphics === undefined && !stopped; n++) await delay(25);
+      if (!herdr && graphics !== true && !options.force) throw new Error('Terminal did not confirm Kitty graphics support. Use Kitty/Ghostty, or --force for a compatible terminal that omits query responses.');
+    }
     if(named){
-      agent=new AgentController(named.name,view);
+      agent=new AgentController(named.name,view,{
+        stop:()=>{setTimeout(stop,50);},
+        describe:()=>({mode:options.headless?'background':'terminal',pid:process.pid,viewerAttached:options.headless?!!viewerServer?.attached:true}),
+      });
+      if(options.headless)viewerServer=await serveViewer(named.name,{
+        configure:value=>serialize(async()=>{geometry=value.geometry;pixel=value.pixel;await view!.resize();}),
+        input:event=>serialize(()=>view!.dispatch(event)),frame:()=>view!.frame,mobile:options.mobile,
+      },options.fps);
       agentServer=await serveAgent(named.name,request=>request.command==='wait'?agent!.execute(request):serialize(()=>agent!.execute(request)));
+      onReady?.(await agent.execute({command:'attach',args:[]}));
     }
     let lastHash = '', id: 101 | 102 = 101, appliedResize = -1;
     while (!stopped) {
@@ -122,6 +138,7 @@ export async function runSession(options: SessionOptions) {
       await queue;
       if (stopped) break;
       if (appliedResize !== resizeRevision) { appliedResize = resizeRevision; if(herdr){geometry=await herdr.geometry(geometry);if(pixel!==herdr.pixelMouse){pixel=herdr.pixelMouse;await write(pixel?'\x1b[?1016h':'\x1b[?1016l');}} await serialize(()=>view!.resize()); lastHash = ''; }
+      if(options.headless){await delay(50);continue;}
       const png = view.frame;
       if (!png) { await delay(20); continue; }
       const hash = createHash('sha256').update(png).digest('hex');
@@ -133,6 +150,7 @@ export async function runSession(options: SessionOptions) {
   } finally {
     stopped = true;
     let cleanupError:unknown;
+    try {await viewerServer?.close();}catch(error){cleanupError=error;}
     try {await agentServer?.close();}catch(error){cleanupError=error;}
     agent?.close();
     view?.dispose();
