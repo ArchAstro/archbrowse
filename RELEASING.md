@@ -26,16 +26,70 @@
 4. Remove the conditional private-access note from the README once anonymous
    access is verified.
 
-## npm publication is a separate step
+## Trusted npm publishing
 
-No npm release is assumed by the source install or bundled skill. Before the
-first publication, verify ownership of the `@archastro/archbrowse` npm name,
-choose a version, and configure a GitHub Actions trusted publisher with npm
-provenance. Use `https://registry.npmjs.org` and public package access; a personal
-`@archastro` scope override can otherwise direct installation to GitHub Packages.
+`.github/workflows/publish.yml` publishes with GitHub OIDC and provenance; no
+`NPM_TOKEN` secret is used. It accepts `vX.Y.Z` tags whose commit is contained in
+`main` and whose version matches both package files. The full reusable CI matrix,
+including HerdR and skill tests, must pass before publication. Stable versions
+use `latest`; prereleases use `next`.
 
-Build and test from a clean checkout. Inspect the archive from `npm pack`,
-including `LICENSE`, the CLI, examples, and skill. Publish only with explicit
-release authorization, tag that commit, and provide release notes describing
-supported terminals and known limitations. Verify installation from an empty
-directory before adding npm installation instructions to the README.
+The npm package must trust this exact identity:
+
+| Setting | Value |
+| --- | --- |
+| Package | `@archastro/archbrowse` |
+| Provider | GitHub Actions |
+| Repository | `ArchAstro/archbrowse` |
+| Workflow filename | `publish.yml` |
+| Environment | Leave empty |
+| Allowed action | `npm publish` |
+
+One-time setup with npm 11.15+ (requires a maintainer login and interactive 2FA):
+
+```fish
+npm trust github @archastro/archbrowse --repo ArchAstro/archbrowse --file publish.yml --allow-publish --yes --registry=https://registry.npmjs.org
+npm trust list @archastro/archbrowse --registry=https://registry.npmjs.org
+```
+
+The same fields are available in the package's npm settings under Trusted
+Publishing. See [npm's trust CLI documentation](https://docs.npmjs.com/cli/v11/commands/npm-trust/).
+
+### Validate without publishing
+
+```fish
+gh workflow run publish.yml --ref main -f dry_run=true
+```
+
+This runs the full tests, packs the CLI, and dry-runs publication. A dry run does
+not prove that npm accepted an OIDC token; the next actual release verifies that
+exchange. Version 0.1.0 has already been published manually and cannot be reused.
+
+### Release a new version
+
+From a clean, up-to-date `main` checkout, choose the intended version, for example:
+
+```fish
+npm version patch --no-git-tag-version
+git add package.json package-lock.json
+git commit -m "Release ArchBrowse patch version"
+git push origin main
+set release_version (node -p 'require("./package.json").version')
+git tag "v$release_version"
+git push origin "v$release_version"
+```
+
+Pushing the tag triggers tests and publication. If using a protected branch,
+merge the version change through a pull request before tagging the merged commit.
+For a failed run, fix the cause before rerunning; never move a published release
+tag. A manual dispatch with `dry_run=false` must run on the matching tag:
+
+```fish
+gh workflow run publish.yml --ref "v$release_version" -f dry_run=false
+```
+
+Tags created by `GITHUB_TOKEN` do not trigger another workflow automatically;
+release automation must explicitly dispatch the publish workflow on the tag.
+After publication, verify the version and provenance on npm and install from an
+empty directory. Public registry commands may need an explicit registry override
+if your personal npm configuration sends the `@archastro` scope to GitHub Packages.
