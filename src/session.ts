@@ -61,7 +61,8 @@ export async function runSession(options: SessionOptions,onReady?:(info:unknown)
     if (view) enqueue(() => view!.dispatch(event));
   });
   const onData = (data: Buffer) => { parser.push(data); clearTimeout(escapeTimer); escapeTimer = setTimeout(() => parser.flushEscape(), 35); };
-  const onResize = () => { geometry = { ...geometry, columns:stdout.columns, rows:stdout.rows }; resizeRevision++; if(!herdr) stdout.write(geometryQuery); };
+  // Queries before terminal entry can leak virtual HerdR replies into setup input.
+  const onResize = () => { geometry = { ...geometry, columns:stdout.columns, rows:stdout.rows }; resizeRevision++; if(!herdr && entered) stdout.write(geometryQuery); };
   async function write(frame: string) {
     if (!stdout.write(frame)) {
       try { await once(stdout, 'drain', { signal:outputAbort.signal }); }

@@ -25,7 +25,7 @@ If the user explicitly names an already-running session for agent-only control, 
    - **Mode:** headless or visible terminal? An explicit headless request settles this for the current task; do not ask for terminal placement until a viewer is wanted.
    - **Where (visible mode only):** a new HerdR split, a new HerdR tab, the current compatible terminal, or another terminal setup? Ask which emulator if relevant. Record a tmux preference, but explain its unsupported rendering path and choose an available alternative for this task.
    - **Session policy:** reuse one named session per workspace, create a fresh session each time, use a specific name, or ask each time?
-   - **Focus:** leave focus with the caller or move it to the viewer? If split direction matters, collect that too; otherwise use `auto`.
+   - **Focus (visible mode only):** leave focus with the caller or move it to the viewer? If split direction matters, collect that too; otherwise use `auto`.
 4. Save their answers with `preferences.mjs set`. [Preference storage and examples](references/preferences.md) explain global defaults, workspace overrides and one-off choices. Preferences belong in the user's config file, never in this skill or the project repository. Honor preferences already supplied in the conversation; do not ask for them again.
 5. On later runs, read saved preferences and skip onboarding. A current explicit request overrides them; only update persistent preferences when the user asks to change their defaults.
 
