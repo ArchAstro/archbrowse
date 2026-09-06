@@ -84,7 +84,14 @@ export async function testHerdr(browser:Browser,endpoint:string,artifacts:string
   const before=new Set(browser.contexts().flatMap(c=>c.pages()));
   async function capture(slug:string){
     let reference:Buffer;
-    await waitFor(async()=>{reference=await page!.screenshot();return !!host.frame&&samePixels(reference,host.frame);},`HerdR outer pixels ${slug}`);
+    // HerdR can clip the initial full-terminal frame while its sidebar/pane
+    // geometry settles. Pixel parity alone can accept that pre-resize frame.
+    await waitFor(async()=>{
+      reference=await page!.screenshot();
+      if(!host.frame||!host.placement||!samePixels(reference,host.frame))return false;
+      const decoded=PNG.sync.read(host.frame);
+      return host.placement.columns*host.cellWidth===decoded.width && host.placement.rows*host.cellHeight===decoded.height;
+    },`HerdR outer pixels and placement ${slug}`);
     assert.ok(host.placement && host.placement.col>=0 && host.placement.row>=0);
     const decoded=PNG.sync.read(host.frame!);
     assert.equal(host.placement.columns*host.cellWidth,decoded.width,'placement matches browser width');
