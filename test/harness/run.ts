@@ -59,7 +59,10 @@ async function click(selector:string,mobile=false) {
   terminal!.mouse(0,x,y); terminal!.mouse(0,x,y,true);
 }
 try {
-  await waitFor(()=>!!endpoint,'Chromium CDP ready'); browser=await chromium.connectOverCDP(endpoint);
+  await waitFor(()=> {
+    if(child.exitCode!==null || child.signalCode!==null)throw new Error(`Chromium exited before CDP was ready (${child.exitCode ?? child.signalCode}):\n${logs}`);
+    return !!endpoint;
+  },'Chromium CDP ready'); browser=await chromium.connectOverCDP(endpoint);
   await step('Launch TSX in an actual PTY and compare Chromium pixels', async()=> { await boot(join(fixtureDir,'App.tsx')); await capture('01-desktop'); });
   await step('Click, keyboard activation, focus traversal and Unicode paste',async()=> {
     await click('#counter'); await page!.waitForFunction(()=>document.querySelector('#count')?.textContent==='1 launches');
@@ -188,6 +191,7 @@ try {
   if(terminal?.frames.length) await writeFile(join(artifacts,'failure-terminal.png'),terminal.frames.at(-1)!);
   throw error;
 } finally {
+  await writeFile(join(artifacts,'chromium.log'),logs);
   await writeFile(join(artifacts,'report.md'),report);
   await writeReport(artifacts,report);
   if(terminal) { await writeFile(join(artifacts,'terminal.log'),terminal.transcript); }
