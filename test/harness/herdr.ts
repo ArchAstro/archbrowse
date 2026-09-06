@@ -6,7 +6,8 @@ import { mkdtemp, writeFile, rm, readFile, readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createConnection } from 'node:net';
-import type { Browser, Page, Route } from 'playwright-core';
+import type { Browser, Page } from 'playwright-core';
+import { createServer, type Server } from 'node:http';
 import { PNG } from 'pngjs';
 import { waitFor, samePixels } from './terminal.js';
 const exec=promisify(execFile);
@@ -82,28 +83,29 @@ export async function testHerdr(browser:Browser,endpoint:string,artifacts:string
   for(const name of ['SSH_CONNECTION','SSH_TTY','TMUX','STY','HERDR_REMOTE_KEYBINDINGS'])delete env[name];
   const host=new KittyHost(name,env,link?join(dir,'tty'):undefined);let socket='',page:Page|undefined;
   const before=new Set(browser.contexts().flatMap(c=>c.pages()));
-  const context=browser.contexts()[0];
-  let startupResize=false;
-  const duringStartup=async(route:Route)=>{
-    if(!startupResize && route.request().isNavigationRequest()) {
-      startupResize=true;
-      await host.resize(130,48);
-      // Deliberately hold navigation open while SIGWINCH is delivered. This
-      // reproduces resizing before runSession has finished view.start().
-      await new Promise(resolve=>setTimeout(resolve,200));
-    }
-    await route.continue();
-  };
+  let startupResize=false, startupServer:Server|undefined, startupUrl:string|undefined;
   async function capture(slug:string){
     let reference:Buffer;
+    try {
     // HerdR can clip the initial full-terminal frame while its sidebar/pane
     // geometry settles. Pixel parity alone can accept that pre-resize frame.
     await waitFor(async()=>{
+      if(!host.placement)return false;
+      const viewport=await page!.evaluate(()=>({width:innerWidth,height:innerHeight}));
+      // Playwright screenshots capture with a viewport-sized clip. Do not
+      // request an old-size clip while the viewer is still applying a resize.
+      if(viewport.width!==host.placement.columns*host.cellWidth || viewport.height!==host.placement.rows*host.cellHeight)return false;
       reference=await page!.screenshot();
       if(!host.frame||!host.placement||!samePixels(reference,host.frame))return false;
       const decoded=PNG.sync.read(host.frame);
       return host.placement.columns*host.cellWidth===decoded.width && host.placement.rows*host.cellHeight===decoded.height;
     },`HerdR outer pixels and placement ${slug}`);
+    }catch(error){
+      if(reference!)await writeFile(join(artifacts,slug+'-failure-browser.png'),reference);
+      if(host.frame)await writeFile(join(artifacts,slug+'-failure-terminal.png'),host.frame);
+      await writeFile(join(artifacts,slug+'-failure.json'),JSON.stringify({placement:host.placement,viewport:await page!.evaluate(()=>({width:innerWidth,height:innerHeight})),cols:host.cols,rows:host.rows},null,2));
+      throw error;
+    }
     assert.ok(host.placement && host.placement.col>=0 && host.placement.row>=0);
     const decoded=PNG.sync.read(host.frame!);
     assert.equal(host.placement.columns*host.cellWidth,decoded.width,'placement matches browser width');
@@ -112,14 +114,26 @@ export async function testHerdr(browser:Browser,endpoint:string,artifacts:string
     await writeFile(join(artifacts,slug+'-browser.png'),reference!);await writeFile(join(artifacts,slug+'-terminal.png'),host.frame!);
   }
   try{
-    if(!legacy&&!setup&&!link&&!agent)await context.route('**/*',duringStartup);
+    if(!legacy&&!setup&&!link&&!agent) {
+      startupServer=createServer((_request,response)=>{void (async()=>{
+        if(!startupResize) {
+          startupResize=true;
+          await host.resize(130,48);
+          // Hold the initial HTTP response while SIGWINCH reaches the viewer.
+          await new Promise(resolve=>setTimeout(resolve,200));
+        }
+        response.writeHead(200,{'Content-Type':'text/html'}).end(`<!doctype html><title>Startup resize</title><style>body{margin:32px}button{min-width:160px;min-height:48px;margin:32px}</style><h1>Resize while loading</h1><button id="counter">Count</button><output id="count">0</output><script>document.querySelector('#counter').onclick=()=>document.querySelector('#count').textContent=String(Number(document.querySelector('#count').textContent)+1)</script>`);
+      })().catch(error=>{response.writeHead(500).end(String(error));});});
+      await new Promise<void>(resolve=>startupServer!.listen(0,'127.0.0.1',resolve));
+      startupUrl=`http://127.0.0.1:${(startupServer.address() as {port:number}).port}/`;
+    }
     await waitFor(async()=>{const {stdout}=await exec('herdr',['session','list','--json'],{env});socket=JSON.parse(stdout).sessions.find((s:{name:string;running:boolean})=>s.name===name&&s.running)?.socket_path??'';return !!socket;},'isolated HerdR server');
     let pane='';await waitFor(async()=>{const snapshot=await rpc(socket,'session.snapshot',{});pane=snapshot.snapshot.panes[0]?.pane_id??'';return !!pane;},'HerdR pane');
     if(legacy){await waitFor(()=>host.output.includes('menu'),'HerdR client first paint before config reload');await assert.rejects(()=>rpc(socket,'pane.graphics.info',{pane_id:pane}),/feature_disabled/);host.releaseDimensions();await writeFile(config,'onboarding = false\n[experimental]\nkitty_graphics = true\n');await rpc(socket,'server.reload_config',{});}
     if(setup)await assert.rejects(()=>rpc(socket,'pane.graphics.info',{pane_id:pane}),/feature_disabled/);
     else if(legacy)await assert.rejects(()=>rpc(socket,'pane.graphics.info',{pane_id:pane}),/cell_size_unavailable/);
     const quote=(value:string)=>"'"+value.replaceAll("'","'\\''")+"'";
-    const command=[process.execPath,resolve('dist/cli.js'),link==='live'?'https://example.com/':link?resolve('test/fixtures/example-domain.html'):resolve('examples/html/index.html'),...(agent?['--session','agent-test']:['--cdp',endpoint]),'--no-install'].map(quote).join(' ');
+    const command=[process.execPath,resolve('dist/cli.js'),link==='live'?'https://example.com/':link?resolve('test/fixtures/example-domain.html'):startupUrl??resolve('examples/html/index.html'),...(agent?['--session','agent-test']:['--cdp',endpoint]),'--no-install'].map(quote).join(' ');
     await exec('herdr',['pane','run',pane,command],{env:{...env,HERDR_SOCKET_PATH:socket}});
     if(agent){
       const control=async(args:string[])=>JSON.parse((await exec(process.execPath,[resolve('dist/cli.js'),'--session','agent-test','--json',...args],{env})).stdout).result;
@@ -191,7 +205,7 @@ export async function testHerdr(browser:Browser,endpoint:string,artifacts:string
     await rpc(socket,'pane.send_keys',{pane_id:pane,keys:['ctrl+q']});await waitFor(()=>page!.isClosed(),'CLI exit');
     await waitFor(()=>!host.frame,'CLI exit clears HerdR image layer');
   }finally{
-    await context.unroute('**/*',duringStartup);
+    if(startupServer){startupServer.closeAllConnections();await new Promise<void>(resolve=>startupServer!.close(()=>resolve()));}
     if(link&&page&&!page.isClosed())await writeFile(join(artifacts,link==='live'?'herdr-live-link-evidence.json':'herdr-link-evidence.json'),JSON.stringify({pixelMouse:host.pixelMouse,url:page.url(),events:await page.evaluate(()=>(window as any).__pointer).catch(()=>[])},null,2));
     await writeFile(join(artifacts,agent?'herdr-agent-pty.log':link==='live'?'herdr-live-link-pty.log':link?'herdr-link-pty.log':setup?`herdr-setup-${setup}-pty.log`:legacy?'herdr-legacy-client-pty.log':'herdr-delayed-discovery-pty.log'),host.output);
     await exec('herdr',['session','stop',name,'--json'],{env}).catch(()=>{});host.pty.kill();
