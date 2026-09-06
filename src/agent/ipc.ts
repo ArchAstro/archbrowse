@@ -52,7 +52,7 @@ export async function sendAgent(name:string,request:AgentRequest):Promise<unknow
       if(!response.ok){fail(new AgentError(response.error?.code??'command_failed',response.error?.message??'Session command failed.'));return;}
       finished=true;client.destroy();resolve(response.result);
     });
-    client.on('error',(error:NodeJS.ErrnoException)=>fail(['ENOENT','ECONNREFUSED'].includes(error.code??'')?new AgentError('session_not_running',`Session "${name}" has no live agent endpoint. Start it with starpane --session ${name}; restart an older viewer to enable agent control.`):error));
+    client.on('error',(error:NodeJS.ErrnoException)=>fail(['ENOENT','ECONNREFUSED'].includes(error.code??'')?new AgentError('session_not_running',`Session "${name}" has no live agent endpoint. Start it with archbrowse --session ${name}; restart an older viewer to enable agent control.`):error));
     client.on('close',()=>{if(!finished)fail(new AgentError('session_closed','The session closed before the command completed.'));});
     client.setTimeout((request.timeout??10000)+15000,()=>fail(new AgentError('command_timeout','Session command timed out.')));
   });

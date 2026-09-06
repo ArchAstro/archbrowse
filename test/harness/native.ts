@@ -7,7 +7,7 @@ import { resolve, join } from 'node:path';
 import { waitFor } from './terminal.js';
 const exec=promisify(execFile);
 if(process.platform!=='darwin') throw new Error('Native capture currently supports macOS + Ghostty. The PTY harness is cross-platform.');
-const dir=await mkdtemp(join(tmpdir(),'starpane-native-'));
+const dir=await mkdtemp(join(tmpdir(),'archbrowse-native-'));
 const artifact=resolve('artifacts/native');
 await mkdir(artifact,{recursive:true});
 try {
@@ -16,7 +16,7 @@ try {
   const inspect=async()=>JSON.parse((await exec('swift',[swift])).stdout) as {permission:boolean;windows:{id:number;pid:number}[]};
   const before=await inspect();
   if(!before.permission) throw new Error('Screen Recording access is disabled for this process. Enable it in macOS System Settings → Privacy & Security → Screen Recording, restart your terminal/Codex, and rerun npm run test:native. No native screenshot was claimed.');
-  await exec('open',['-na','Ghostty','--stdout',join(artifact,'ghostty.log'),'--stderr',join(artifact,'ghostty-error.log'),'--args','--window-save-state=never','--title=Starpane-Verification','--window-width=100','--window-height=50','-e',process.execPath,resolve('dist/cli.js'),resolve('examples/App.tsx'),'--no-install']);
+  await exec('open',['-na','Ghostty','--stdout',join(artifact,'ghostty.log'),'--stderr',join(artifact,'ghostty-error.log'),'--args','--window-save-state=never','--title=ArchBrowse-Verification','--window-width=100','--window-height=50','-e',process.execPath,resolve('dist/cli.js'),resolve('examples/App.tsx'),'--no-install']);
   let target:{id:number;pid:number}|undefined;
   await waitFor(async()=> { target=(await inspect()).windows.find(w=>!before.windows.some(b=>b.id===w.id)); return !!target; },'new Ghostty window',20000);
   // Native capture is for visual review; the automated PTY harness owns state readiness/assertions.

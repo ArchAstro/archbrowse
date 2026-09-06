@@ -1,6 +1,6 @@
-# Starpane
+# ArchBrowse
 
-*A browser in your terminal, shared with your agent.*
+*A terminal browser you and your agents can control.*
 
 Run React apps, arbitrary HTTP(S) websites, and local HTML files inside a Kitty graphics terminal. Chromium renders the DOM, CSS, SVG, canvas and browser events; the CLI transports pixels and terminal input. Source edits rebuild automatically.
 
@@ -17,42 +17,43 @@ Use **Node 22+** and a terminal implementing Kitty graphics, such as Kitty or Gh
 Install the agent skill directly from this repository:
 
 ```fish
-npx skills add ArchAstro/starpane --skill starpane
+npx skills add ArchAstro/archbrowse --skill archbrowse
 ```
 
 Add `--global` for user-wide installation, or `--agent codex` to select Codex explicitly. The repository is currently private, so your GitHub account needs access.
 
-The bundled [Starpane skill](skills/starpane/SKILL.md) is discoverable at `skills/starpane/`. It includes its bootstrap installer, saved-preference helper and usage references. It can install the CLI, collect terminal/layout/session preferences, and teach an agent to launch and control a viewer. The skill is also included in the npm package; `starpane --skill` prints its entrypoint.
+The bundled [ArchBrowse skill](skills/archbrowse/SKILL.md) is discoverable at `skills/archbrowse/`. It includes its bootstrap installer, saved-preference helper and usage references. It can install the CLI, collect terminal/layout/session preferences, and teach an agent to launch and control a viewer. The skill is also included in the npm package; `archbrowse --skill` prints its entrypoint.
 
 Bootstrap from a checkout:
 
 ```fish
-node skills/starpane/scripts/bootstrap.mjs install
+node skills/archbrowse/scripts/bootstrap.mjs install
 ```
 
-The helper reuses a working CLI, otherwise installs a user-local build and links `~/.local/bin/starpane`. With a standalone skill copy, it fetches the canonical GitHub repo using `gh` (authenticated access is currently required). It does not assume an npm release exists and does not install Chromium unconditionally.
+The helper reuses a working CLI, otherwise installs a user-local build and links `~/.local/bin/archbrowse`. With a standalone skill copy, it fetches the canonical GitHub repo using `gh` (authenticated access is currently required). It does not assume an npm release exists and does not install Chromium unconditionally.
 
-Preferences are saved in `~/.config/starpane/preferences.json` (or `$XDG_CONFIG_HOME/starpane/preferences.json`), independently of browser profiles and the source repository. `STARPANE_PREFERENCES_FILE` overrides that path. Global defaults can be overridden per canonical worktree.
+Preferences are saved in `~/.config/archbrowse/preferences.json` (or `$XDG_CONFIG_HOME/archbrowse/preferences.json`), independently of browser profiles and the source repository. `ARCHBROWSE_PREFERENCES_FILE` overrides that path. Global defaults can be overridden per canonical worktree.
 
 Example preference choices:
 
 ```fish
-node skills/starpane/scripts/preferences.mjs set --host herdr --placement split --sessions workspace --focus keep
-node skills/starpane/scripts/preferences.mjs set --workspace /path/to/worktree --placement tab
-node skills/starpane/scripts/preferences.mjs plan --workspace /path/to/worktree
+node skills/archbrowse/scripts/preferences.mjs set --host herdr --placement split --sessions workspace --focus keep
+node skills/archbrowse/scripts/preferences.mjs set --workspace /path/to/worktree --placement tab
+node skills/archbrowse/scripts/preferences.mjs plan --workspace /path/to/worktree
 ```
 
 Supported choices cover HerdR splits/tabs, direct terminal placement, workspace/fresh/named/ask session policies, focus, split direction, mobile mode and browser downloads. A tmux preference is retained but reported as unsupported for rendering; agent commands can still run in tmux against a live viewer elsewhere.
 
 `npm run test:skill` exercises saved split and tab preferences against an isolated real HerdR session using the installed CLI. Run the bootstrap installer first. Unit tests cover preference persistence, overrides and session isolation.
 
-## Upgrading from React Kitty
+## Upgrading from Starpane or React Kitty
 
-The package and primary command are now `starpane`. The installed `react-kitty` command remains an alias to the same CLI.
+The package is now `@archastro/archbrowse`, the primary command is `archbrowse`, and the skill is `$archbrowse`. Installed `starpane` and `react-kitty` commands remain aliases to the same CLI.
 
-1. New settings use `STARPANE_SESSIONS_DIR` and `STARPANE_CHROMIUM`. Their `REACT_KITTY_*` equivalents still work; new names take precedence.
-2. New installations store profiles under `~/.local/share/starpane/sessions` (or `$XDG_DATA_HOME/starpane/sessions`). If only the old `react-kitty/sessions` directory exists, Starpane reuses it in place, preserving profiles, locks and live agent attachments.
-3. The optional test settings `REACT_KITTY_WEB_SMOKE` and `REACT_KITTY_HERDR_TEST` remain aliases for the new `STARPANE_*` names.
+1. New settings use `ARCHBROWSE_*`. The corresponding `STARPANE_*` settings remain accepted, along with the original `REACT_KITTY_SESSIONS_DIR` and `REACT_KITTY_CHROMIUM`; new names take precedence.
+2. New profiles use `~/.local/share/archbrowse/sessions`. Existing `starpane/sessions` or `react-kitty/sessions` directories are reused when no newer directory exists, preserving profiles, locks and live agent sockets.
+3. Preferences default to `~/.config/archbrowse/preferences.json`. Existing `~/.config/starpane/preferences.json` is reused if the new file does not exist. The saved layout and session policy are preserved.
+4. Optional test settings `STARPANE_WEB_SMOKE`, `STARPANE_HERDR_TEST`, `REACT_KITTY_WEB_SMOKE` and `REACT_KITTY_HERDR_TEST` remain aliases for `ARCHBROWSE_*`.
 
 ## 1. Run your component
 
@@ -111,9 +112,9 @@ node dist/cli.js examples/html/index.html --mobile
 
 ### Running inside HerdR
 
-HerdR requires its pane-graphics API; raw Kitty escapes from a pane are not forwarded to the outer terminal. Starpane detects `HERDR_ENV`, targets the calling `HERDR_PANE_ID`, and streams frames through `HERDR_SOCKET_PATH`. The stream's owned image layer is removed on exit. Direct Ghostty/Kitty uses the regular Kitty transport.
+HerdR requires its pane-graphics API; raw Kitty escapes from a pane are not forwarded to the outer terminal. ArchBrowse detects `HERDR_ENV`, targets the calling `HERDR_PANE_ID`, and streams frames through `HERDR_SOCKET_PATH`. The stream's owned image layer is removed on exit. Direct Ghostty/Kitty uses the regular Kitty transport.
 
-When graphics are disabled, launching Starpane offers to update your HerdR config and reload it:
+When graphics are disabled, launching ArchBrowse offers to update your HerdR config and reload it:
 
 ```text
 Enable experimental.kitty_graphics in /path/to/config.toml and reload HerdR? [y/N]
@@ -128,7 +129,7 @@ The equivalent manual setting is:
 kitty_graphics = true
 ```
 
-Run `herdr server reload-config`, then detach and reattach the HerdR client so it discovers the host terminal's graphics and cell-size capabilities. Run Starpane normally inside a pane:
+Run `herdr server reload-config`, then detach and reattach the HerdR client so it discovers the host terminal's graphics and cell-size capabilities. Run ArchBrowse normally inside a pane:
 
 ```fish
 node dist/cli.js example.com
@@ -158,7 +159,7 @@ node dist/cli.js sessions delete work
 3. **Targets:** omitting the target reopens saved tabs. Supplying a target uses the same profile but starts at that target. Local paths and `--root` are saved as absolute paths; the mobile viewport setting is remembered.
 4. **Local apps:** a named session reuses its HTTP port so the origin—and therefore localStorage/IndexedDB—stays stable. If another process occupies that port, startup fails instead of silently changing the origin. Local files must still exist when reopening.
 5. **Isolation:** names use separate profiles and allow only one active CLI per name. Another launch or deletion is refused while the session is active. A crashed CLI's heartbeat lock becomes reclaimable after 10 seconds. Clean exit is required for the latest tab/cookie snapshot.
-6. **Storage:** defaults to `$XDG_DATA_HOME/starpane/sessions`, or `~/.local/share/starpane/sessions`. `STARPANE_SESSIONS_DIR` overrides the directory. Directories use mode `0700` and metadata/cookie files use `0600` on Unix. These files contain browsing state; deleting a session removes its profile and saved state.
+6. **Storage:** defaults to `$XDG_DATA_HOME/archbrowse/sessions`, or `~/.local/share/archbrowse/sessions`. `ARCHBROWSE_SESSIONS_DIR` overrides the directory. Directories use mode `0700` and metadata/cookie files use `0600` on Unix. These files contain browsing state; deleting a session removes its profile and saved state.
 7. **Names:** 1–64 lowercase letters, digits, hyphens or underscores; the first character must be a letter or digit. `--session` cannot be combined with `--cdp`, since named sessions must own their profile. Without `--session`, launches remain temporary.
 
 ## Let an agent drive a live session
@@ -230,7 +231,7 @@ node dist/cli.js App.tsx --chromium '/Applications/Google Chrome.app/Contents/Ma
 node dist/cli.js App.tsx --cdp http://127.0.0.1:9222
 ```
 
-`STARPANE_CHROMIUM` also selects a binary. `--cdp` attaches to an explicitly supplied Chromium debugging endpoint, creates its own context, and closes only that context on exit. It leaves the external browser running. It does not scan for or take over arbitrary running browsers.
+`ARCHBROWSE_CHROMIUM` also selects a binary. `--cdp` attaches to an explicitly supplied Chromium debugging endpoint, creates its own context, and closes only that context on exit. It leaves the external browser running. It does not scan for or take over arbitrary running browsers.
 
 If no executable exists, the default behavior installs Playwright Chromium once. `--no-install` prevents that. To install explicitly:
 
@@ -287,7 +288,7 @@ npm run check
 An optional public-network smoke checks an external HTTPS page (use a stable page with an `h1`):
 
 ```fish
-env STARPANE_WEB_SMOKE=https://example.com npm run test:e2e
+env ARCHBROWSE_WEB_SMOKE=https://example.com npm run test:e2e
 ```
 
 To test the **actual HerdR process inside a PTY**, including emitted Kitty pixels, image placement, outer-terminal clicks, resize, and the Example Domain link at 21×48-pixel cell size:
@@ -296,7 +297,7 @@ To test the **actual HerdR process inside a PTY**, including emitted Kitty pixel
 npm run test:herdr
 ```
 
-Set `STARPANE_WEB_SMOKE=https://example.com` when running this command to also click the live Learn more link through HerdR and follow its IANA redirect.
+Set `ARCHBROWSE_WEB_SMOKE=https://example.com` when running this command to also click the live Learn more link through HerdR and follow its IANA redirect.
 
 This requires `herdr` on PATH (and `python3` for the high-DPI PTY ioctl fixture), creates and removes an isolated named HerdR session with graphics enabled, and opens no native terminal windows. It decodes HerdR's outer-terminal image packets and compares them with Chromium without pre-seeding host dimensions. It also reproduces starting a client with graphics disabled and then reloading the enabled config, proving the old-client limitation. The PTY suite also accepts and declines the configuration prompt and verifies reload/backup behavior. Unit tests cover delayed capability replies, format-preserving TOML edits and concurrent edit protection. The ordinary PTY tests explicitly clear inherited HerdR pane variables so they cannot accidentally target an existing user pane.
 

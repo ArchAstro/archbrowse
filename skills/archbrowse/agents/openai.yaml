@@ -1,0 +1,3 @@
+interface:
+  display_name: "ArchBrowse"
+  short_description: "Install and use ArchBrowse with saved workspace preferences"

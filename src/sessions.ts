@@ -12,12 +12,12 @@ export interface SessionRecord {
   mobile?:{width:number;height:number}; tabs:string[]; activeTab:number;
 }
 export function sessionsRoot() {
-  const override=process.env.STARPANE_SESSIONS_DIR ?? process.env.REACT_KITTY_SESSIONS_DIR;
+  const override=process.env.ARCHBROWSE_SESSIONS_DIR ?? process.env.STARPANE_SESSIONS_DIR ?? process.env.REACT_KITTY_SESSIONS_DIR;
   if(override)return resolve(override);
   const base=process.env.XDG_DATA_HOME ?? join(homedir(),'.local','share');
-  const current=join(base,'starpane','sessions'),legacy=join(base,'react-kitty','sessions');
-  // Keep existing profiles, locks and live agent sockets in place during upgrade.
-  return resolve(!existsSync(current)&&existsSync(legacy)?legacy:current);
+  const roots=['archbrowse','starpane','react-kitty'].map(name=>join(base,name,'sessions'));
+  // Reuse existing profiles, locks and live agent sockets without moving them.
+  return resolve(roots.find(path=>existsSync(path)) ?? roots[0]);
 }
 export function validateSessionName(name:string) {
   if(!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(name)) throw new Error('Session names must be 1–64 lowercase letters, digits, underscores or hyphens, starting with a letter or digit.');

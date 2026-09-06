@@ -7,14 +7,14 @@ import { sessionsRoot, acquireSession, listSessions } from '../src/sessions.js';
 import { serveAgent, sendAgent } from '../src/agent/ipc.js';
 import { agentSocket } from '../src/agent/protocol.js';
 
-test('Starpane reuses legacy sessions and live endpoints; new env names take precedence',async()=> {
-  const root=await mkdtemp(join(tmpdir(),'starpane-compat-'));
-  const keys=['STARPANE_SESSIONS_DIR','REACT_KITTY_SESSIONS_DIR','XDG_DATA_HOME'] as const;
+test('ArchBrowse reuses legacy sessions and live endpoints; new env names take precedence',async()=> {
+  const root=await mkdtemp(join(tmpdir(),'archbrowse-compat-'));
+  const keys=['ARCHBROWSE_SESSIONS_DIR','STARPANE_SESSIONS_DIR','REACT_KITTY_SESSIONS_DIR','XDG_DATA_HOME'] as const;
   const previous=Object.fromEntries(keys.map(key=>[key,process.env[key]]));
   let session:Awaited<ReturnType<typeof acquireSession>>|undefined,server:Awaited<ReturnType<typeof serveAgent>>|undefined;
   try {
-    delete process.env.STARPANE_SESSIONS_DIR;delete process.env.REACT_KITTY_SESSIONS_DIR;process.env.XDG_DATA_HOME=root;
-    const current=join(root,'starpane','sessions'),legacy=join(root,'react-kitty','sessions');
+    delete process.env.ARCHBROWSE_SESSIONS_DIR;delete process.env.STARPANE_SESSIONS_DIR;delete process.env.REACT_KITTY_SESSIONS_DIR;process.env.XDG_DATA_HOME=root;
+    const current=join(root,'archbrowse','sessions'),legacy=join(root,'react-kitty','sessions');
     assert.equal(sessionsRoot(),current);
     await mkdir(legacy,{recursive:true});assert.equal(sessionsRoot(),legacy);
     session=await acquireSession('work');
@@ -22,12 +22,15 @@ test('Starpane reuses legacy sessions and live endpoints; new env names take pre
     assert.equal((await listSessions())[0].name,'work');
     const endpoint=agentSocket('work');
     server=await serveAgent('work',async()=>({session:'work'}));
-    process.env.STARPANE_SESSIONS_DIR=legacy;assert.equal(agentSocket('work'),endpoint);
+    process.env.ARCHBROWSE_SESSIONS_DIR=legacy;assert.equal(agentSocket('work'),endpoint);
     assert.deepEqual(await sendAgent('work',{command:'attach',args:[]}),{session:'work'});
     await server.close();server=undefined;await session.release();session=undefined;
-    delete process.env.STARPANE_SESSIONS_DIR;process.env.REACT_KITTY_SESSIONS_DIR=legacy;assert.equal(sessionsRoot(),legacy);
-    process.env.STARPANE_SESSIONS_DIR=current;assert.equal(sessionsRoot(),current);
-    delete process.env.STARPANE_SESSIONS_DIR;delete process.env.REACT_KITTY_SESSIONS_DIR;
+    delete process.env.ARCHBROWSE_SESSIONS_DIR;process.env.REACT_KITTY_SESSIONS_DIR=legacy;assert.equal(sessionsRoot(),legacy);
+    const starpane=join(root,'starpane','sessions');await mkdir(starpane,{recursive:true});
+    delete process.env.REACT_KITTY_SESSIONS_DIR;assert.equal(sessionsRoot(),starpane);
+    process.env.STARPANE_SESSIONS_DIR=legacy;assert.equal(sessionsRoot(),legacy);
+    process.env.ARCHBROWSE_SESSIONS_DIR=current;assert.equal(sessionsRoot(),current);
+    delete process.env.ARCHBROWSE_SESSIONS_DIR;delete process.env.STARPANE_SESSIONS_DIR;delete process.env.REACT_KITTY_SESSIONS_DIR;
     await mkdir(current,{recursive:true});assert.equal(sessionsRoot(),current);
   }finally {
     await server?.close();await session?.release();

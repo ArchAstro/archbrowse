@@ -1,39 +1,39 @@
 # Agent workflow
 
-Use `starpane --help` for current commands. Every action explicitly names its live session. The viewer stays running in its terminal; commands from the agent operate the same page and do not spawn a second browser.
+Use `archbrowse --help` for current commands. Every action explicitly names its live session. The viewer stays running in its terminal; commands from the agent operate the same page and do not spawn a second browser.
 
 ```sh
-starpane --session NAME attach --json
-starpane --session NAME snapshot -i --json
-starpane --session NAME get url
-starpane --session NAME read
+archbrowse --session NAME attach --json
+archbrowse --session NAME snapshot -i --json
+archbrowse --session NAME get url
+archbrowse --session NAME read
 ```
 
 The snapshot includes `tree` and `refs`, each ref carrying its role and accessible name. Use those exact refs. They are invalidated by a new snapshot, navigation, tab changes or element replacement; request another snapshot on `stale_ref`.
 
 ```sh
-starpane --session NAME fill REF "Ada"
-starpane --session NAME click REF
-starpane --session NAME press Enter
-starpane --session NAME check REF
-starpane --session NAME select REF option-value
-starpane --session NAME wait --text "Saved"
-starpane --session NAME wait --url '**/dashboard'
-starpane --session NAME snapshot -i
+archbrowse --session NAME fill REF "Ada"
+archbrowse --session NAME click REF
+archbrowse --session NAME press Enter
+archbrowse --session NAME check REF
+archbrowse --session NAME select REF option-value
+archbrowse --session NAME wait --text "Saved"
+archbrowse --session NAME wait --url '**/dashboard'
+archbrowse --session NAME snapshot -i
 ```
 
-Prefer product conditions over sleeping or `networkidle` (which is not a Starpane wait option). `--timeout MS` is 1–30000, default 10000. Waits do not prevent human terminal input.
+Prefer product conditions over sleeping or `networkidle` (which is not a ArchBrowse wait option). `--timeout MS` is 1–30000, default 10000. Waits do not prevent human terminal input.
 
 ```sh
-starpane --session NAME get text REF
-starpane --session NAME get value REF
-starpane --session NAME get attr REF href
-starpane --session NAME screenshot /tmp/starpane-page.png
-starpane --session NAME screenshot /tmp/starpane-full.png --full
-starpane --session NAME open https://example.com
-starpane --session NAME back
-starpane --session NAME tab list
-starpane --session NAME tab t1
+archbrowse --session NAME get text REF
+archbrowse --session NAME get value REF
+archbrowse --session NAME get attr REF href
+archbrowse --session NAME screenshot /tmp/archbrowse-page.png
+archbrowse --session NAME screenshot /tmp/archbrowse-full.png --full
+archbrowse --session NAME open https://example.com
+archbrowse --session NAME back
+archbrowse --session NAME tab list
+archbrowse --session NAME tab t1
 ```
 
 Tab IDs are discovered from `tab list`. Snapshot refs and tab IDs must not be guessed from prior sessions. Commands currently target the active tab's main frame. Use `eval` for a deliberate page-side query when a regular command does not provide the needed information, not as a replacement for browser click/fill semantics.

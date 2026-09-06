@@ -1,13 +1,13 @@
 ---
-name: starpane
-description: Install and configure Starpane, open React apps, HTML files or websites in a terminal using saved layout and session preferences, and drive the live page through snapshots and refs. Use for Starpane setup, terminal browser previews, or agent control of a Starpane session.
+name: archbrowse
+description: Install and configure ArchBrowse, open React apps, HTML files or websites in a terminal using saved layout and session preferences, and drive the live page through snapshots and refs. Use for ArchBrowse setup, terminal browser previews, or agent control of a ArchBrowse session.
 ---
 
-# Starpane
+# ArchBrowse
 
-Starpane displays Chromium pixels in a terminal and lets humans and agents control the same page. A viewer owns a browser session; agent commands attach to that viewer.
+ArchBrowse displays Chromium pixels in a terminal and lets humans and agents control the same page. A viewer owns a browser session; agent commands attach to that viewer.
 
-Resolve `scripts/` and `references/` relative to this skill directory. In examples, `STARPANE_SKILL_DIR` points here and `STARPANE_WORKSPACE` is the user's actual worktree. Set them with the caller's shell syntax; do not change the worktree just to run a helper.
+Resolve `scripts/` and `references/` relative to this skill directory. In examples, `ARCHBROWSE_SKILL_DIR` points here and `ARCHBROWSE_WORKSPACE` is the user's actual worktree. Set them with the caller's shell syntax; do not change the worktree just to run a helper.
 
 If the user explicitly names an already-running session for agent-only control, attach directly and use **Drive the page** below. Placement onboarding is needed before creating a viewer, not before every read or click.
 
@@ -15,10 +15,10 @@ If the user explicitly names an already-running session for agent-only control, 
 
 1. Check `node --version` (22+), then run:
    ```sh
-   node "$STARPANE_SKILL_DIR/scripts/bootstrap.mjs" status
-   node "$STARPANE_SKILL_DIR/scripts/preferences.mjs" show --workspace "$STARPANE_WORKSPACE"
+   node "$ARCHBROWSE_SKILL_DIR/scripts/bootstrap.mjs" status
+   node "$ARCHBROWSE_SKILL_DIR/scripts/preferences.mjs" show --workspace "$ARCHBROWSE_WORKSPACE"
    ```
-2. If Starpane is missing, read [installation](references/installation.md) and run the bootstrap installer. Reuse installed Chromium; the CLI already discovers it. Do not guess an npm package or install a second browser unconditionally.
+2. If ArchBrowse is missing, read [installation](references/installation.md) and run the bootstrap installer. Reuse installed Chromium; the CLI already discovers it. Do not guess an npm package or install a second browser unconditionally.
 3. If preferences are missing, ask these questions together, using known context to recommend choices:
    - **Where:** a new HerdR split, a new HerdR tab, the current compatible terminal, or another terminal setup? Ask which emulator if relevant. Record a tmux preference, but explain its unsupported rendering path and choose an available alternative for this task.
    - **Session policy:** reuse one named session per workspace, create a fresh session each time, use a specific name, or ask each time?
@@ -29,31 +29,31 @@ If the user explicitly names an already-running session for agent-only control, 
 ## Open the viewer where the user wants it
 
 ```sh
-node "$STARPANE_SKILL_DIR/scripts/preferences.mjs" plan --workspace "$STARPANE_WORKSPACE"
+node "$ARCHBROWSE_SKILL_DIR/scripts/preferences.mjs" plan --workspace "$ARCHBROWSE_WORKSPACE"
 ```
 
 Use the returned session name, layout settings and `viewerFlags`. Read [launching](references/launching.md) for the selected host only.
 
-- `ready`: proceed. For reusable sessions, try `starpane --session NAME attach --json` **before** creating a pane or tab. Reuse a matching live viewer; an inactive profile can be reopened in the chosen location.
+- `ready`: proceed. For reusable sessions, try `archbrowse --session NAME attach --json` **before** creating a pane or tab. Reuse a matching live viewer; an inactive profile can be reopened in the chosen location.
 - `needs-setup` / `needs-session-choice`: ask for the missing choice and rerun the plan.
 - `host-unavailable`: explain which host context is missing; select an available host for this request.
-- `unsupported-host`: retain the preference but do not pretend the transport works. Starpane currently cannot render inside tmux; agents in tmux can still drive a live viewer elsewhere. Never use `--force` as a tmux workaround.
+- `unsupported-host`: retain the preference but do not pretend the transport works. ArchBrowse currently cannot render inside tmux; agents in tmux can still drive a live viewer elsewhere. Never use `--force` as a tmux workaround.
 
-A saved layout preference authorizes that layout when the user asks to open a viewer. Do not ask again before each split/tab. Keep focus according to the preference. Use the bootstrap result's `command` argument vector when `starpane` is not on PATH.
+A saved layout preference authorizes that layout when the user asks to open a viewer. Do not ask again before each split/tab. Keep focus according to the preference. Use the bootstrap result's `command` argument vector when `archbrowse` is not on PATH.
 
-Starpane sessions and terminal panes are different objects. Reusing a profile does not mean creating another viewer with the same name: one live viewer owns the profile lock. On a failed attach, distinguish `session_not_running` from other errors before starting another viewer. Verify ownership before closing/restarting a pane.
+ArchBrowse sessions and terminal panes are different objects. Reusing a profile does not mean creating another viewer with the same name: one live viewer owns the profile lock. On a failed attach, distinguish `session_not_running` from other errors before starting another viewer. Verify ownership before closing/restarting a pane.
 
 ## Drive the page
 
 Use the live CLI's `--help` for current syntax. Follow the snapshot → action → product condition → fresh snapshot loop:
 
 ```sh
-starpane --session NAME snapshot -i --json
-starpane --session NAME fill REF "Ada"
-starpane --session NAME click REF
-starpane --session NAME wait --text "Welcome"
-starpane --session NAME snapshot -i
-starpane --session NAME screenshot /tmp/starpane-result.png
+archbrowse --session NAME snapshot -i --json
+archbrowse --session NAME fill REF "Ada"
+archbrowse --session NAME click REF
+archbrowse --session NAME wait --text "Welcome"
+archbrowse --session NAME snapshot -i
+archbrowse --session NAME screenshot /tmp/archbrowse-result.png
 ```
 
 Replace `NAME` with the planned name and `REF` with an exact ref from the latest snapshot. Prefer refs or semantic selectors over guessed coordinates. Re-snapshot after navigation, tab changes or DOM replacement; `stale_ref` is a request to inspect again, not to guess a replacement. [Interaction reference](references/interaction.md) covers reads, forms, navigation, tabs, screenshots and failure diagnosis.

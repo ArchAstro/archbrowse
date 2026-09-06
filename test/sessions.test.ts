@@ -6,8 +6,8 @@ import { join } from 'node:path';
 import { acquireSession, listSessions, deleteSession, validateSessionName } from '../src/sessions.js';
 
 test('named session lock, atomic metadata, private permissions and active deletion guard',async()=> {
-  const root=await mkdtemp(join(tmpdir(),'starpane-session-unit-'));
-  const original=process.env.STARPANE_SESSIONS_DIR; process.env.STARPANE_SESSIONS_DIR=root;
+  const root=await mkdtemp(join(tmpdir(),'archbrowse-session-unit-'));
+  const original=process.env.ARCHBROWSE_SESSIONS_DIR; process.env.ARCHBROWSE_SESSIONS_DIR=root;
   let session:Awaited<ReturnType<typeof acquireSession>>|undefined;
   try {
     for(const bad of ['../other','../','A','a/b','.hidden','a'.repeat(65)]) assert.throws(()=>validateSessionName(bad));
@@ -27,7 +27,7 @@ test('named session lock, atomic metadata, private permissions and active deleti
     await assert.rejects(()=>deleteSession('work'),/does not exist/);
   } finally {
     await session?.release();
-    if(original===undefined) delete process.env.STARPANE_SESSIONS_DIR; else process.env.STARPANE_SESSIONS_DIR=original;
+    if(original===undefined) delete process.env.ARCHBROWSE_SESSIONS_DIR; else process.env.ARCHBROWSE_SESSIONS_DIR=original;
     await rm(root,{recursive:true,force:true});
   }
 });

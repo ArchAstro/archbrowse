@@ -6,26 +6,26 @@ import { parseArgs } from 'node:util';
 import { runSession } from './session.js';
 import { listSessions, deleteSession } from './sessions.js';
 import { installBrowser } from './browser.js';
-const help = `starpane — React and websites in your terminal
+const help = `archbrowse — React and websites in your terminal
 
-  starpane ./App.tsx             Live React entry (default export or App)
-  starpane ./app.jsx             JSX / JS / TS also accepted
-  starpane ./index.html         Local HTML with relative assets and live reload
-  starpane https://example.com   Any HTTP(S) website
-  starpane example.com           Bare domains default to HTTPS
-  starpane localhost:3000        Local dev server
-  starpane ./App.tsx --mobile    390 × 844 CSS pixels + touch emulation
+  archbrowse ./App.tsx             Live React entry (default export or App)
+  archbrowse ./app.jsx             JSX / JS / TS also accepted
+  archbrowse ./index.html         Local HTML with relative assets and live reload
+  archbrowse https://example.com   Any HTTP(S) website
+  archbrowse example.com           Bare domains default to HTTPS
+  archbrowse localhost:3000        Local dev server
+  archbrowse ./App.tsx --mobile    390 × 844 CSS pixels + touch emulation
 
-  starpane example.com --session work  Create/reuse a saved browser profile
-  starpane --session work              Reopen saved pages
-  starpane sessions list               List named sessions
-  starpane sessions delete work        Delete an inactive profile
+  archbrowse example.com --session work  Create/reuse a saved browser profile
+  archbrowse --session work              Reopen saved pages
+  archbrowse sessions list               List named sessions
+  archbrowse sessions delete work        Delete an inactive profile
 
-  starpane attach work                 Inspect a live session
-  starpane --session work snapshot -i  Discover interactive refs
-  starpane --session work click @REF   Drive the visible page
-  starpane --session work fill @REF TEXT
-  starpane --session work screenshot page.png
+  archbrowse attach work                 Inspect a live session
+  archbrowse --session work snapshot -i  Discover interactive refs
+  archbrowse --session work click @REF   Drive the visible page
+  archbrowse --session work fill @REF TEXT
+  archbrowse --session work screenshot page.png
 
   Agent commands: attach, snapshot, read, click, dblclick, hover, focus,
     fill, type, press, check, uncheck, select, scroll, get, wait, screenshot,
@@ -65,7 +65,7 @@ try {
   jsonOutput=!!values.json;
   function number(value: string, name: string, max = 10000) { const n = Number(value); if (!Number.isInteger(n) || n < 1 || n > max) throw new Error(`${name} must be an integer between 1 and ${max}`); return n; }
   if (values.help) process.stdout.write(help);
-  else if(values.skill)process.stdout.write(await readFile(new URL('../skills/starpane/SKILL.md',import.meta.url),'utf8'));
+  else if(values.skill)process.stdout.write(await readFile(new URL('../skills/archbrowse/SKILL.md',import.meta.url),'utf8'));
   else if(positionals[0]==='attach') {
     const name=values.session??positionals[1];
     if(!name||positionals.length!==(values.session?1:2))throw new Error('Use attach NAME or --session NAME attach.');
@@ -91,6 +91,6 @@ try {
 } catch (error) {
   const message=error instanceof Error?error.message:String(error);
   if(jsonOutput)process.stdout.write(JSON.stringify({ok:false,error:{code:error instanceof AgentError?error.code:'command_failed',message}})+'\n');
-  else process.stderr.write(`starpane: ${message}\n`);
+  else process.stderr.write(`archbrowse: ${message}\n`);
   process.exitCode=1;
 }

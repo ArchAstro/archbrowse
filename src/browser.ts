@@ -28,9 +28,9 @@ export async function findChromium(explicit?: string): Promise<string | undefine
 }
 export interface BrowserOptions { executable?:string; cdp?:string; install?:boolean; log?:(message:string)=>void }
 async function browserExecutable(options:BrowserOptions) {
-  let path = await findChromium(options.executable ?? process.env.STARPANE_CHROMIUM ?? process.env.REACT_KITTY_CHROMIUM);
+  let path = await findChromium(options.executable ?? process.env.ARCHBROWSE_CHROMIUM ?? process.env.STARPANE_CHROMIUM ?? process.env.REACT_KITTY_CHROMIUM);
   if (!path) {
-    if (options.install === false) throw new Error('No Chromium found. Set --chromium /path/to/chrome or run starpane --install-browser.');
+    if (options.install === false) throw new Error('No Chromium found. Set --chromium /path/to/chrome or run archbrowse --install-browser.');
     options.log?.('No installed Chromium found; downloading Playwright Chromium once…');
     await installBrowser(); path = chromium.executablePath();
   }

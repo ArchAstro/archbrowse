@@ -1,16 +1,16 @@
 # Saved preferences
 
-Default file: `$XDG_CONFIG_HOME/starpane/preferences.json`, falling back to `~/.config/starpane/preferences.json`. `STARPANE_PREFERENCES_FILE` overrides the exact path. Writes are atomic and mode 0600. The helper refuses malformed data instead of resetting it.
+Default file: `$XDG_CONFIG_HOME/archbrowse/preferences.json`, falling back to `~/.config/archbrowse/preferences.json`. `ARCHBROWSE_PREFERENCES_FILE` overrides the exact path. Writes are atomic and mode 0600. The helper refuses malformed data instead of resetting it.
 
 ```sh
-node "$STARPANE_SKILL_DIR/scripts/preferences.mjs" show --workspace "$STARPANE_WORKSPACE"
-node "$STARPANE_SKILL_DIR/scripts/preferences.mjs" set --host herdr --placement split --sessions workspace --focus keep
+node "$ARCHBROWSE_SKILL_DIR/scripts/preferences.mjs" show --workspace "$ARCHBROWSE_WORKSPACE"
+node "$ARCHBROWSE_SKILL_DIR/scripts/preferences.mjs" set --host herdr --placement split --sessions workspace --focus keep
 ```
 
 That command is an **example choice**, not a default for all users. Collect the user's preferences first. Omit `--workspace` when saving global defaults; supply it for a project/worktree override:
 
 ```sh
-node "$STARPANE_SKILL_DIR/scripts/preferences.mjs" set --workspace "$STARPANE_WORKSPACE" --placement tab
+node "$ARCHBROWSE_SKILL_DIR/scripts/preferences.mjs" set --workspace "$ARCHBROWSE_WORKSPACE" --placement tab
 ```
 
 Overrides inherit the global settings. The workspace key is the canonical Git worktree root, or the canonical directory outside Git. No file is added to the user's repo.
@@ -51,8 +51,8 @@ For complex answers, write a JSON patch to a temporary file and pass `set --file
 ## Planning and one-off requests
 
 ```sh
-node "$STARPANE_SKILL_DIR/scripts/preferences.mjs" plan --workspace "$STARPANE_WORKSPACE"
-node "$STARPANE_SKILL_DIR/scripts/preferences.mjs" plan --workspace "$STARPANE_WORKSPACE" --sessions fresh
+node "$ARCHBROWSE_SKILL_DIR/scripts/preferences.mjs" plan --workspace "$ARCHBROWSE_WORKSPACE"
+node "$ARCHBROWSE_SKILL_DIR/scripts/preferences.mjs" plan --workspace "$ARCHBROWSE_WORKSPACE" --sessions fresh
 ```
 
 `plan` never saves changes. Its `settings` apply to this launch, while `set` changes future preferences.

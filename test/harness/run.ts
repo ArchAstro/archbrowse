@@ -11,11 +11,11 @@ import { chromium, type Browser, type Page } from 'playwright-core';
 import { findChromium } from '../../src/browser.js';
 import { writeReport } from './report.js';
 import { Terminal, waitFor, samePixels } from './terminal.js';
-const webSmoke=process.env.STARPANE_WEB_SMOKE ?? process.env.REACT_KITTY_WEB_SMOKE;
-const herdrTest=process.env.STARPANE_HERDR_TEST ?? process.env.REACT_KITTY_HERDR_TEST;
+const webSmoke=process.env.ARCHBROWSE_WEB_SMOKE ?? process.env.STARPANE_WEB_SMOKE ?? process.env.REACT_KITTY_WEB_SMOKE;
+const herdrTest=process.env.ARCHBROWSE_HERDR_TEST ?? process.env.STARPANE_HERDR_TEST ?? process.env.REACT_KITTY_HERDR_TEST;
 const artifacts = resolve('artifacts', new Date().toISOString().replaceAll(':','-'));
 await mkdir(artifacts,{recursive:true});
-const profile = await mkdtemp(join(tmpdir(),'starpane-browser-'));
+const profile = await mkdtemp(join(tmpdir(),'archbrowse-browser-'));
 // Put generated entry next to the package so normal dependency resolution is exercised.
 const fixtureDir = await mkdtemp(resolve('test/generated-'));
 await cp('examples/html',join(fixtureDir,'html'),{recursive:true});
@@ -27,7 +27,7 @@ const child = spawn(executable,['--headless=new','--remote-debugging-port=0',`--
 let endpoint = '', browser:Browser | undefined, terminal:Terminal | undefined, page:Page | undefined;
 const terminals: Terminal[] = [];
 const cleanup: (()=>Promise<unknown>)[]=[];
-let logs = '', report = '# Starpane browser / PTY verification\n\n';
+let logs = '', report = '# ArchBrowse browser / PTY verification\n\n';
 child.stderr.on('data',chunk => { logs+=chunk; endpoint = /DevTools listening on (ws:\/\/\S+)/.exec(logs)?.[1] ?? endpoint; });
 async function step(name:string, fn:()=>Promise<void>) { console.log(name); report += `1. ${name}\n`; await fn(); }
 async function capture(name:string) {

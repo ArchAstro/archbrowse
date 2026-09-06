@@ -9,7 +9,7 @@ export async function serveReact(file: string, port = 0) {
   const entry = resolve(file);
   if (!['.tsx', '.jsx', '.js', '.ts'].includes(extname(entry))) throw new Error('Expected a .tsx, .jsx, .js or .ts entry file.');
   if (!(await stat(entry)).isFile()) throw new Error(`Not a file: ${entry}`);
-  const root = dirname(entry), outputDir = resolve(root, '.starpane-output');
+  const root = dirname(entry), outputDir = resolve(root, '.archbrowse-output');
   const clients = new Set<ServerResponse>();
   let outputs = new Map<string, Uint8Array>(), errors: string[] = [], revision = 0;
   function publish() {
@@ -26,7 +26,7 @@ export async function serveReact(file: string, port = 0) {
   const require = createRequire(import.meta.url);
   const builder = await context({
     absWorkingDir: root,
-    stdin: { contents: `import React from 'react'; import {createRoot} from 'react-dom/client'; import * as entry from ${JSON.stringify(entry)}; const Root = entry.default ?? entry.App; if (Root) createRoot(document.getElementById('root'), {onUncaughtError: error => window.dispatchEvent(new CustomEvent('starpane-error', {detail:String(error?.stack || error)}))}).render(React.createElement(Root));`, resolveDir: root, sourcefile: 'starpane-entry.tsx', loader: 'tsx' },
+    stdin: { contents: `import React from 'react'; import {createRoot} from 'react-dom/client'; import * as entry from ${JSON.stringify(entry)}; const Root = entry.default ?? entry.App; if (Root) createRoot(document.getElementById('root'), {onUncaughtError: error => window.dispatchEvent(new CustomEvent('archbrowse-error', {detail:String(error?.stack || error)}))}).render(React.createElement(Root));`, resolveDir: root, sourcefile: 'archbrowse-entry.tsx', loader: 'tsx' },
     nodePaths: [resolve(dirname(require.resolve('react/package.json')), '..')],
     bundle: true, write: false, outdir: outputDir, entryNames: 'bundle', assetNames: 'assets/[name]-[hash]',
     format: 'esm', platform: 'browser', target: 'chrome110', jsx: 'automatic', sourcemap: 'inline',
@@ -39,8 +39,8 @@ export async function serveReact(file: string, port = 0) {
     function showRuntime(message) { let panel = document.getElementById('runtime-error'); if (!panel) { panel=document.createElement('pre'); panel.id='runtime-error'; document.body.append(panel); } panel.textContent=message; }
     window.addEventListener('error', e => showRuntime(e.error?.stack || e.message));
     window.addEventListener('unhandledrejection', e => showRuntime(String(e.reason?.stack || e.reason)));
-    window.addEventListener('starpane-error', e => showRuntime(e.detail));
-    let revision; const stream = new EventSource('/__starpane/events');
+    window.addEventListener('archbrowse-error', e => showRuntime(e.detail));
+    let revision; const stream = new EventSource('/__archbrowse/events');
     stream.onmessage = e => { const next = JSON.parse(e.data); let panel = document.getElementById('build-error');
       if (next.errors.length) { if (!panel) { panel = document.createElement('pre'); panel.id = 'build-error'; document.body.append(panel); } panel.textContent = next.errors.join('\\n'); }
       else { panel?.remove(); if (revision !== undefined && revision !== next.revision) location.reload(); }
@@ -51,7 +51,7 @@ export async function serveReact(file: string, port = 0) {
     res.setHeader('Cache-Control', 'no-store');
     try {
       const path = decodeURIComponent(new URL(req.url!, 'http://localhost').pathname);
-      if (path === '/__starpane/events') {
+      if (path === '/__archbrowse/events') {
         res.writeHead(200, { 'Content-Type': 'text/event-stream', Connection: 'keep-alive' });
         clients.add(res); res.write(`data: ${JSON.stringify({ errors, revision })}\n\n`);
         req.on('close', () => clients.delete(res)); return;

@@ -3,7 +3,7 @@ import './style.css';
 export default function App() {
   const [count, setCount] = useState(0), [name, setName] = useState(''), [enabled, setEnabled] = useState(true), [level, setLevel] = useState('35');
   return <main>
-    <header><span className="mark">S↗</span><span>STARPANE <small>LIVE WORKSPACE</small></span><b className="live">● Connected</b></header>
+    <header><span className="mark">A↗</span><span>ARCHBROWSE <small>LIVE WORKSPACE</small></span><b className="live">● Connected</b></header>
     <section className="hero"><p className="eyebrow">CHROMIUM PIXELS. TERMINAL KEYS.</p><h1>A real app.<br/><em>Right here.</em></h1><p>Your components, CSS, and browser APIs — running inside the terminal.</p></section>
     <section className="grid">
       <article><span className="label">01 / INTERACTION</span><h2>Make something happen.</h2><p>Mouse, keyboard, or touch. Same React state.</p><button id="counter" onClick={() => setCount(count + 1)}>Launches <strong>{count}</strong><span>↗</span></button><output id="count">{count} launches</output></article>

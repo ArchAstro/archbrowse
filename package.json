@@ -1,9 +1,10 @@
 {
-  "name": "starpane",
+  "name": "@archastro/archbrowse",
   "version": "0.1.0",
-  "description": "A browser in your terminal, shared with your agent",
+  "description": "A terminal browser you and your agents can control",
   "type": "module",
   "bin": {
+    "archbrowse": "dist/cli.js",
     "starpane": "dist/cli.js",
     "react-kitty": "dist/cli.js"
   },
@@ -54,10 +55,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ArchAstro/starpane.git"
+    "url": "git+https://github.com/ArchAstro/archbrowse.git"
   },
-  "homepage": "https://github.com/ArchAstro/starpane#readme",
+  "homepage": "https://github.com/ArchAstro/archbrowse#readme",
   "bugs": {
-    "url": "https://github.com/ArchAstro/starpane/issues"
+    "url": "https://github.com/ArchAstro/archbrowse/issues"
   }
 }
