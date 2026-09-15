@@ -25,7 +25,8 @@ export class KittyHost {
   constructor(name:string,env:NodeJS.ProcessEnv,pixelTty?:string) {
     this.pixelTty=pixelTty;
     if(pixelTty){this.cols=106;this.rows=35;this.cellWidth=21;this.cellHeight=48;}
-    const file=pixelTty?'python3':'herdr';
+    // node-pty's Windows resolver searches literal filenames; it does not apply PATHEXT.
+    const file=pixelTty?'python3':process.platform==='win32'?'herdr.exe':'herdr';
     const args=pixelTty?[resolve('test/harness/pixel-pty.py'),'launch',pixelTty,String(this.cols),String(this.rows),String(this.cellWidth),String(this.cellHeight),'herdr','--session',name]:['--session',name];
     this.pty=spawn(file,args,{cwd:process.cwd(),env,cols:this.cols,rows:this.rows});
     this.pty.onData(data=>{this.output+=data;this.pending+=data;this.parse();});
