@@ -25,9 +25,12 @@ export class KittyHost {
   constructor(name:string,env:NodeJS.ProcessEnv,pixelTty?:string) {
     this.pixelTty=pixelTty;
     if(pixelTty){this.cols=106;this.rows=35;this.cellWidth=21;this.cellHeight=48;}
-    const file=pixelTty?'python3':'herdr';
+    // node-pty's Windows resolver searches literal filenames; it does not apply PATHEXT.
+    const file=pixelTty?'python3':process.platform==='win32'?'herdr.exe':'herdr';
     const args=pixelTty?[resolve('test/harness/pixel-pty.py'),'launch',pixelTty,String(this.cols),String(this.rows),String(this.cellWidth),String(this.cellHeight),'herdr','--session',name]:['--session',name];
-    this.pty=spawn(file,args,{cwd:process.cwd(),env,cols:this.cols,rows:this.rows});
+    // System ConPTY on Windows Server filters Kitty APC graphics packets.
+    // Modern graphical hosts bundle ConPTY with VT passthrough support.
+    this.pty=spawn(file,args,{cwd:process.cwd(),env,cols:this.cols,rows:this.rows,useConptyDll:process.platform==='win32'});
     this.pty.onData(data=>{this.output+=data;this.pending+=data;this.parse();});
   }
   private parse(){
@@ -73,6 +76,9 @@ export class KittyHost {
   async resize(cols:number,rows:number){this.cols=cols;this.rows=rows;if(this.pixelTty)await exec('python3',[resolve('test/harness/pixel-pty.py'),'resize',this.pixelTty,String(cols),String(rows),String(this.cellWidth),String(this.cellHeight)]);else this.pty.resize(cols,rows);}
 }
 export async function rpc(socket:string,method:string,params:unknown):Promise<any>{
+  // Independent upstream transport mapping: Windows .sock paths are logical
+  // names in interprocess's local named-pipe namespace, not filesystem sockets.
+  if(process.platform==='win32'&&!socket.startsWith('\\\\.\\pipe\\'))socket='\\\\.\\pipe\\'+socket;
   return new Promise((resolve,reject)=>{const client=createConnection(socket,()=>client.write(JSON.stringify({id:'herdr-test',method,params})+'\n'));let data='';client.on('data',chunk=>{data+=chunk;const end=data.indexOf('\n');if(end>=0){client.end();const reply=JSON.parse(data.slice(0,end));if(reply.error)reject(new Error(JSON.stringify(reply.error)));else resolve(reply.result);}});client.on('error',reject);client.setTimeout(5000,()=>{client.destroy();reject(new Error('HerdR API timeout'));});});
 }
 export async function testHerdr(browser:Browser,endpoint:string,artifacts:string,legacy=false,setup?:'accept'|'decline',link:boolean|'live'=false,agent=false,startup=false){

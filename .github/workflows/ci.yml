@@ -19,6 +19,53 @@ env:
   PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright
 
 jobs:
+  platform-smoke:
+    name: Installed CLI + HerdR / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+          registry-url: https://registry.npmjs.org
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+      - run: node node_modules/playwright-core/cli.js install --with-deps chromium
+      - name: Allow Chromium sandbox on Ubuntu
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          chromium_path="$(node -p "require('playwright-core').chromium.executablePath()")"
+          sudo tee /etc/apparmor.d/archbrowse-ci-chromium > /dev/null <<EOF
+          abi <abi/4.0>,
+          include <tunables/global>
+          profile archbrowse-ci-chromium "$chromium_path" flags=(unconfined) {
+            userns,
+          }
+          EOF
+          sudo apparmor_parser -r /etc/apparmor.d/archbrowse-ci-chromium
+      - name: Install current stable HerdR with checksum verification
+        env:
+          HERDR_TEST_VERSION: '0.9.0'
+        run: node scripts/install-ci-herdr.mjs
+      - name: Installed CLI, browser input, persistence and React
+        run: npx --no-install tsx test/harness/platform-run.ts
+      - name: Native HerdR graphics, input and detach/reattach
+        if: ${{ !cancelled() && success() }}
+        run: npx --no-install tsx test/harness/platform-run.ts --herdr
+      - name: Upload platform evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: installed-cli-herdr-${{ matrix.os }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 14
   test:
     name: Node ${{ matrix.node }} / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
