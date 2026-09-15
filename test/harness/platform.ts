@@ -163,3 +163,4 @@ try {
   await writeFile(join(artifacts,'report.json'),JSON.stringify({platform:process.platform,arch:process.arch,node:process.version,mode:herdr?'herdr':'cli',events},null,2));
   await rm(root,{recursive:true,force:true,maxRetries:5});
 }
+process.send?.({type:'platform-complete'});

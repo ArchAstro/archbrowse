@@ -54,10 +54,10 @@ jobs:
           HERDR_TEST_VERSION: '0.9.0'
         run: node scripts/install-ci-herdr.mjs
       - name: Installed CLI, browser input, persistence and React
-        run: npx --no-install tsx test/harness/platform.ts
+        run: npx --no-install tsx test/harness/platform-run.ts
       - name: Native HerdR graphics, input and detach/reattach
         if: ${{ !cancelled() && success() }}
-        run: npx --no-install tsx test/harness/platform.ts --herdr
+        run: npx --no-install tsx test/harness/platform-run.ts --herdr
       - name: Upload platform evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
