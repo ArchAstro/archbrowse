@@ -28,7 +28,9 @@ export class KittyHost {
     // node-pty's Windows resolver searches literal filenames; it does not apply PATHEXT.
     const file=pixelTty?'python3':process.platform==='win32'?'herdr.exe':'herdr';
     const args=pixelTty?[resolve('test/harness/pixel-pty.py'),'launch',pixelTty,String(this.cols),String(this.rows),String(this.cellWidth),String(this.cellHeight),'herdr','--session',name]:['--session',name];
-    this.pty=spawn(file,args,{cwd:process.cwd(),env,cols:this.cols,rows:this.rows});
+    // System ConPTY on Windows Server filters Kitty APC graphics packets.
+    // Modern graphical hosts bundle ConPTY with VT passthrough support.
+    this.pty=spawn(file,args,{cwd:process.cwd(),env,cols:this.cols,rows:this.rows,useConptyDll:process.platform==='win32'});
     this.pty.onData(data=>{this.output+=data;this.pending+=data;this.parse();});
   }
   private parse(){

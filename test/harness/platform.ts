@@ -7,6 +7,7 @@ import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { KittyHost, rpc } from './herdr.js';
 import { waitFor, samePixels } from './terminal.js';
+import { spawn as spawnPty } from 'node-pty';
 
 const exec = promisify(execFile), herdr = process.argv.includes('--herdr');
 const root = await mkdtemp(join(tmpdir(), 'archbrowse platform '));
@@ -77,6 +78,20 @@ try {
       await command(['screenshot',join(artifacts,'02-react.png')],'react');
     });
   } else {
+    if(process.platform==='win32') await step('Verify Kitty protocol passthrough in bundled ConPTY',async()=>{
+      const packet='\x1b_Ga=q,i=31,s=1,v=1,f=24;AAAA\x1b\\';
+      const results=[];
+      for(const useConptyDll of [false,true]) {
+        let output='',ended=false;
+        const pty=spawnPty(process.execPath,['-e',`process.stdout.write(${JSON.stringify(packet)});setTimeout(()=>{},500)`],{env,cwd:process.cwd(),cols:80,rows:24,useConptyDll});
+        pty.onData(data=>output+=data);pty.onExit(()=>ended=true);
+        try { await waitFor(()=>ended,'ConPTY protocol probe exits',10_000); }
+        finally { if(!ended)pty.kill(); }
+        results.push({runtime:useConptyDll?'bundled':'system',preserved:output.includes(packet)});
+      }
+      await writeFile(join(artifacts,'conpty-probe.json'),JSON.stringify(results,null,2));
+      assert.equal(results[1].preserved,true,'The tested terminal transport must preserve Kitty APC bytes');
+    });
     const config = join(root,'herdr.toml');
     await writeFile(config,'onboarding = false\n[terminal]\nkitty_graphics = true\n[experimental]\nkitty_graphics = true\n');
     Object.assign(env,{HERDR_CONFIG_PATH:config,TERM:'xterm-ghostty',TERM_PROGRAM:'ghostty'});
