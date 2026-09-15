@@ -18,6 +18,7 @@ for (const key of Object.keys(env)) if (key.startsWith('HERDR_')) delete env[key
 for (const key of ['SSH_CONNECTION', 'SSH_TTY', 'TMUX', 'STY']) delete env[key];
 let entry = '', host:KittyHost|undefined;
 const herdrName = `ab-platform-${process.pid}-${Date.now()}`;
+let socket='',pane='';
 const events:{ check:string; status:string }[] = [];
 async function invoke(args:string[]) {
   const {stdout} = await exec(process.execPath, [entry, ...args], { env, timeout:45_000, maxBuffer:8*1024*1024 });
@@ -79,7 +80,6 @@ try {
     const config = join(root,'herdr.toml');
     await writeFile(config,'onboarding = false\n[terminal]\nkitty_graphics = true\n[experimental]\nkitty_graphics = true\n');
     Object.assign(env,{HERDR_CONFIG_PATH:config,TERM:'xterm-ghostty',TERM_PROGRAM:'ghostty'});
-    let socket='',pane='';
     await step('Start real HerdR in native PTY/ConPTY and discover its pane', async()=>{
       host = new KittyHost(herdrName,env); host.releaseDimensions();
       await waitFor(async()=>{
@@ -91,7 +91,16 @@ try {
     });
     // Use a script file to avoid shell-quoting differences in Windows pane commands.
     const launchScript=join(root,'attach.cjs');
-    await writeFile(launchScript,`require('node:child_process').spawnSync(${JSON.stringify(process.execPath)},${JSON.stringify([entry,'attach','work','--view'])},{stdio:'inherit',env:process.env});`);
+    await writeFile(launchScript,`
+      const fs=require('node:fs');
+      const path=${JSON.stringify(join(artifacts,'viewer-launch.json'))};
+      const info={node:process.execPath,stdinTTY:!!process.stdin.isTTY,stdoutTTY:!!process.stdout.isTTY,
+        sessionRoot:process.env.ARCHBROWSE_SESSIONS_DIR,socket:process.env.HERDR_SOCKET_PATH,pane:process.env.HERDR_PANE_ID};
+      fs.writeFileSync(path,JSON.stringify(info,null,2));
+      const result=require('node:child_process').spawnSync(${JSON.stringify(process.execPath)},${JSON.stringify([entry,'attach','work','--view'])},{stdio:'inherit',env:process.env});
+      fs.writeFileSync(path,JSON.stringify({...info,status:result.status,signal:result.signal,error:result.error?.message},null,2));
+      process.exit(result.status??1);
+    `);
     const quote=(value:string)=>process.platform==='win32'?`'${value.replaceAll("'","''")}'`:"'"+value.replaceAll("'","'\\''")+"'";
     const launch=process.platform==='win32'?`node "${launchScript}"`:[process.execPath,launchScript].map(quote).join(' ');
     for (let attempt=0;attempt<2;attempt++) {
@@ -123,6 +132,14 @@ try {
 } finally {
   for (const name of ['work','react']) if(entry) await invoke(['sessions','stop',name]).catch(()=>{});
   if(host) {
+    if(socket&&pane) {
+      const diagnostics={
+        viewer:await command(['attach']).catch(error=>({error:String(error)})),
+        graphics:await rpc(socket,'pane.graphics.info',{pane_id:pane}).catch(error=>({error:String(error)})),
+        pane:await exec('herdr',['pane','read',pane,'--source','recent-unwrapped','--lines','50'],{env:{...env,HERDR_SOCKET_PATH:socket},timeout:10_000}).then(r=>r.stdout).catch(error=>({error:String(error)})),
+      };
+      await writeFile(join(artifacts,'herdr-diagnostics.json'),JSON.stringify(diagnostics,null,2));
+    }
     await writeFile(join(artifacts,'herdr-outer.log'),host.output);
     await exec('herdr',['session','stop',herdrName,'--json'],{env,timeout:10_000}).catch(()=>{});
     host.pty.kill();
