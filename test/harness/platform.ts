@@ -130,16 +130,16 @@ try {
   await writeFile(join(artifacts,'failure.txt'),String((error as Error).stack??error));
   throw error;
 } finally {
-  for (const name of ['work','react']) if(entry) await invoke(['sessions','stop',name]).catch(()=>{});
-  if(host) {
-    if(socket&&pane) {
+  if(host&&socket&&pane) {
       const diagnostics={
         viewer:await command(['attach']).catch(error=>({error:String(error)})),
         graphics:await rpc(socket,'pane.graphics.info',{pane_id:pane}).catch(error=>({error:String(error)})),
         pane:await exec('herdr',['pane','read',pane,'--source','recent-unwrapped','--lines','50'],{env:{...env,HERDR_SOCKET_PATH:socket},timeout:10_000}).then(r=>r.stdout).catch(error=>({error:String(error)})),
       };
       await writeFile(join(artifacts,'herdr-diagnostics.json'),JSON.stringify(diagnostics,null,2));
-    }
+  }
+  for (const name of ['work','react']) if(entry) await invoke(['sessions','stop',name]).catch(()=>{});
+  if(host) {
     await writeFile(join(artifacts,'herdr-outer.log'),host.output);
     await exec('herdr',['session','stop',herdrName,'--json'],{env,timeout:10_000}).catch(()=>{});
     host.pty.kill();
