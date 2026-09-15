@@ -74,6 +74,9 @@ export class KittyHost {
   async resize(cols:number,rows:number){this.cols=cols;this.rows=rows;if(this.pixelTty)await exec('python3',[resolve('test/harness/pixel-pty.py'),'resize',this.pixelTty,String(cols),String(rows),String(this.cellWidth),String(this.cellHeight)]);else this.pty.resize(cols,rows);}
 }
 export async function rpc(socket:string,method:string,params:unknown):Promise<any>{
+  // Independent upstream transport mapping: Windows .sock paths are logical
+  // names in interprocess's local named-pipe namespace, not filesystem sockets.
+  if(process.platform==='win32'&&!socket.startsWith('\\\\.\\pipe\\'))socket='\\\\.\\pipe\\'+socket;
   return new Promise((resolve,reject)=>{const client=createConnection(socket,()=>client.write(JSON.stringify({id:'herdr-test',method,params})+'\n'));let data='';client.on('data',chunk=>{data+=chunk;const end=data.indexOf('\n');if(end>=0){client.end();const reply=JSON.parse(data.slice(0,end));if(reply.error)reject(new Error(JSON.stringify(reply.error)));else resolve(reply.result);}});client.on('error',reject);client.setTimeout(5000,()=>{client.destroy();reject(new Error('HerdR API timeout'));});});
 }
 export async function testHerdr(browser:Browser,endpoint:string,artifacts:string,legacy=false,setup?:'accept'|'decline',link:boolean|'live'=false,agent=false,startup=false){

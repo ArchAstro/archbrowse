@@ -7,6 +7,13 @@ export class HerdrCapabilityError extends Error {
   constructor(public readonly code:string,message:string){super(message);this.name='HerdrCapabilityError';}
 }
 type Reply={error?:{code:string;message:string};result?:{type?:string;cell_width_px?:number;cell_height_px?:number;pixel_mouse?:boolean;status?:string;diagnostics?:unknown[]}};
+/** HerdR's Windows interprocess::GenericNamespaced transport prefixes the
+ * logical HERDR_SOCKET_PATH verbatim. The .sock file is only a marker.
+ * https://github.com/herdrdev/herdr/blob/v0.9.0/src/ipc.rs */
+export function herdrSocketAddress(path:string,platform:NodeJS.Platform=process.platform) {
+  const prefix='\\\\.\\pipe\\';
+  return platform==='win32'&&!path.startsWith(prefix)?prefix+path:path;
+}
 function address(env:NodeJS.ProcessEnv) {
   if(env.HERDR_ENV!=='1') return;
   if(!env.HERDR_SOCKET_PATH || !env.HERDR_PANE_ID) throw new Error('HerdR pane context is incomplete. Run from a live HerdR pane, or launch directly in Ghostty.');
@@ -21,7 +28,7 @@ function failure(reply:Reply) {
 }
 async function request(socket:string,method:string,params:Record<string,unknown>,keep=false):Promise<{reply:Reply;client:Socket}> {
   return new Promise((resolve,reject)=> {
-    const client=createConnection(socket);let text='';
+    const client=createConnection(herdrSocketAddress(socket));let text='';
     const error=(e:Error)=>{client.removeAllListeners();client.destroy();reject(e);};
     client.on('connect',()=>client.write(JSON.stringify({id:'archbrowse:graphics',method,params})+'\n'));
     client.on('data',chunk=>{
